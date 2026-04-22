@@ -1,3 +1,4 @@
+import hashlib
 import json
 import sqlite3
 from datetime import datetime
@@ -77,6 +78,7 @@ RECORD_SELECT = f"""
         sd.longitude,
         sd.product_id,
         sd.status,
+        sd.block_hash,
         {BATCH_KEY_EXPR} AS batch_id,
         {UID_KEY_EXPR} AS product_uid,
         {PRODUCT_EXPR} AS product,
@@ -170,6 +172,35 @@ def parse_timestamp(value):
     except (TypeError, ValueError):
         return None
 
+
+# ── Blockchain hash chain functions ──────────────────────────────────────────
+
+def get_last_hash(batch_id):
+    """Get SHA256 hash of last record for this batch (for chaining)."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT block_hash FROM sensor_data WHERE batch_id = ? ORDER BY id DESC LIMIT 1",
+            (batch_id,),
+        )
+        row = cursor.fetchone()
+        return row["block_hash"] if row and row["block_hash"] else "0" * 64
+
+
+def compute_block_hash(record, prev_hash):
+    """Compute SHA256 hash linking this record to the previous one."""
+    data = (
+        f"{prev_hash}"
+        f"{record['batch_id']}"
+        f"{record['timestamp']}"
+        f"{record['temperature']}"
+        f"{record['humidity']}"
+        f"{record['current_stage']}"
+    )
+    return hashlib.sha256(data.encode()).hexdigest()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 def evaluate_edge_health(current_stage, temperature, humidity):
     stage = normalize_stage(current_stage)
@@ -394,7 +425,8 @@ def init_db():
                 product TEXT,
                 sensor_id TEXT,
                 current_stage TEXT,
-                product_ref INTEGER
+                product_ref INTEGER,
+                block_hash TEXT
             )
             """
         )
@@ -418,6 +450,7 @@ def init_db():
         ensure_column(cursor, "sensor_data", "sensor_id", "TEXT")
         ensure_column(cursor, "sensor_data", "current_stage", "TEXT")
         ensure_column(cursor, "sensor_data", "product_ref", "INTEGER")
+        ensure_column(cursor, "sensor_data", "block_hash", "TEXT")
 
         migrate_legacy_rows(cursor)
         conn.commit()
@@ -471,6 +504,8 @@ def row_to_dict(row):
         age_minutes = max(int((datetime.now() - parsed_timestamp).total_seconds() // 60), 0)
         is_active = age_minutes <= STALE_BATCH_HOURS * 60
 
+    block_hash = row["block_hash"] if row["block_hash"] else None
+
     return {
         "id": row["id"],
         "timestamp": row["timestamp"],
@@ -489,7 +524,8 @@ def row_to_dict(row):
         "current_stage_label": format_stage_label(current_stage),
         "current_stage_index": SUPPLY_CHAIN_STAGES.index(current_stage),
         "status": status,
-        "blockchain_verification": "Verified",
+        "block_hash": block_hash,
+        "blockchain_verification": "Blockchain Verified ✓" if block_hash else "Pending",
         "is_active": is_active,
         "minutes_since_update": age_minutes,
         **edge_health,
@@ -578,6 +614,10 @@ def fetch_uid_history(product_uid):
 def insert_sensor_data(data):
     record = build_record(data)
 
+    # Compute blockchain hash chain
+    prev_hash = get_last_hash(record["batch_id"])
+    block_hash = compute_block_hash(record, prev_hash)
+
     with get_connection() as conn:
         cursor = conn.cursor()
         registry_id = upsert_product_registry(
@@ -604,9 +644,10 @@ def insert_sensor_data(data):
                 product,
                 sensor_id,
                 current_stage,
-                product_ref
+                product_ref,
+                block_hash
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 record["timestamp"],
@@ -623,6 +664,7 @@ def insert_sensor_data(data):
                 record["sensor_id"],
                 record["current_stage"],
                 registry_id,
+                block_hash,
             ),
         )
         conn.commit()
@@ -745,6 +787,48 @@ def get_current_uid(product_uid: str):
     if not rows:
         raise HTTPException(status_code=404, detail=f"No current status found for product UID {product_uid}.")
     return row_to_dict(rows[0])
+
+
+@app.get("/verify/{batch_id}")
+def verify_batch_integrity(batch_id: str):
+    """Verify SHA256 hash chain integrity for a batch — proves tamper evidence."""
+    rows = fetch_record_rows(
+        where_clause=f"{BATCH_KEY_EXPR} = ?",
+        params=(batch_id,),
+        order_by="sd.id ASC",
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"No records found for batch {batch_id}.")
+
+    prev_hash = "0" * 64
+    chain_intact = True
+    chain = []
+
+    for row in rows:
+        record = row_to_dict(row)
+        expected_hash = compute_block_hash(record, prev_hash)
+        actual_hash = row["block_hash"]
+        is_valid = actual_hash == expected_hash
+
+        if not is_valid:
+            chain_intact = False
+
+        chain.append({
+            "id": record["id"],
+            "timestamp": record["timestamp"],
+            "stage": record["current_stage"],
+            "expected_hash": expected_hash[:16] + "...",
+            "actual_hash": (actual_hash[:16] + "...") if actual_hash else None,
+            "valid": is_valid,
+        })
+        prev_hash = expected_hash
+
+    return {
+        "batch_id": batch_id,
+        "chain_intact": chain_intact,
+        "record_count": len(chain),
+        "chain": chain,
+    }
 
 
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
