@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodChain Product Tracking</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Inter:wght@300;400;500&display=swap');
+
+        :root {
+            --gold: #d4af37;
+            --line: rgba(212, 175, 55, 0.14);
+            --muted: #a89d80;
+            --text: #f8f3e5;
+            --success: #8ee39d;
+            --warning: #ffaf97;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(212, 175, 55, 0.1), transparent 30%),
+                linear-gradient(180deg, #050300 0%, #090500 100%);
+        }
+
+        .shell {
+            max-width: 1080px;
+            margin: 0 auto;
+        }
+
+        .hero,
+        .search-card,
+        .track-card,
+        .empty-card {
+            border-radius: 24px;
+            border: 1px solid var(--line);
+            background: rgba(10, 7, 0, 0.82);
+            backdrop-filter: blur(12px);
+        }
+
+        .hero {
+            margin-bottom: 24px;
+            padding: 30px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            background: rgba(212, 175, 55, 0.05);
+            color: #d5bd79;
+            font-size: 12px;
+            margin-bottom: 16px;
+        }
+
+        .hero h1 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 44px;
+            letter-spacing: 2px;
+        }
+
+        .hero h1 span { color: var(--gold); }
+
+        .hero p {
+            margin-top: 10px;
+            max-width: 720px;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        .search-card {
+            margin-bottom: 22px;
+            padding: 20px;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .search-row input {
+            flex: 1;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(212, 175, 55, 0.12);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            outline: none;
+        }
+
+        .search-row input:focus {
+            border-color: rgba(212, 175, 55, 0.4);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.08);
+        }
+
+        .search-row button {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #d4af37, #b8860b);
+            color: #000;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 1.3px;
+            cursor: pointer;
+        }
+
+        .track-card {
+            display: none;
+            padding: 28px;
+        }
+
+        .track-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .track-title h2 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 34px;
+            letter-spacing: 1.5px;
+        }
+
+        .track-title p {
+            margin-top: 6px;
+            color: var(--muted);
+        }
+
+        .verified-badge,
+        .status-pill,
+        .alert-chip,
+        .healthy-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .verified-badge {
+            border: 1px solid rgba(76, 175, 80, 0.25);
+            background: rgba(76, 175, 80, 0.08);
+            color: var(--success);
+            height: fit-content;
+        }
+
+        .status-pill {
+            color: #f2d98b;
+            background: rgba(212, 175, 55, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.22);
+        }
+
+        .alert-chip {
+            color: #ffd5c6;
+            background: rgba(255, 143, 116, 0.12);
+            border: 1px solid rgba(255, 143, 116, 0.16);
+        }
+
+        .healthy-chip {
+            color: var(--success);
+            background: rgba(76, 175, 80, 0.08);
+            border: 1px solid rgba(76, 175, 80, 0.22);
+        }
+
+        .progress-wrap,
+        .health-banner {
+            margin-bottom: 18px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(212, 175, 55, 0.12);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .progress-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+            color: #b7a779;
+            font-size: 13px;
+        }
+
+        .progress-track {
+            height: 12px;
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid rgba(212, 175, 55, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #d4af37, #f0d47a);
+            transition: width 0.4s ease;
+        }
+
+        .health-banner strong {
+            display: block;
+            margin-bottom: 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 18px;
+            letter-spacing: 1px;
+        }
+
+        .health-banner p {
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+        }
+
+        .stat-card {
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(212, 175, 55, 0.12);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .stat-card label {
+            display: block;
+            margin-bottom: 10px;
+            color: #83785e;
+            font-size: 11px;
+            letter-spacing: 1.4px;
+            text-transform: uppercase;
+        }
+
+        .stat-card span {
+            display: block;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 24px;
+            color: #f1e0a7;
+            line-height: 1.45;
+        }
+
+        .empty-card {
+            padding: 32px 28px;
+            text-align: center;
+        }
+
+        .empty-card h3 {
+            margin-bottom: 10px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 28px;
+            color: var(--gold);
+            letter-spacing: 1px;
+        }
+
+        .empty-card p {
+            color: #978c71;
+            line-height: 1.7;
+        }
+
+        @media (max-width: 780px) {
+            .track-top,
+            .search-row,
+            .progress-head {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <section class="hero">
+            <div class="hero-badge">Public Product Tracking</div>
+            <h1>TRACK YOUR <span>PRODUCT</span></h1>
+            <p>Enter a unique product ID or scan the QR code to view the latest customer-friendly traceability summary. This page shows the exact product item, its batch, current stage, and live health status.</p>
+        </section>
+
+        <section class="search-card">
+            <div class="search-row">
+                <input id="product-uid-input" type="text" placeholder="Enter Unique Product ID from the QR code" list="uid-options">
+                <datalist id="uid-options"></datalist>
+                <button onclick="searchProduct()">Track Product</button>
+            </div>
+        </section>
+
+        <section class="track-card" id="track-card">
+            <div class="track-top">
+                <div class="track-title">
+                    <h2 id="product-name">Product</h2>
+                    <p id="uid-label">Unique Product ID</p>
+                </div>
+                <div class="verified-badge">Blockchain verified</div>
+            </div>
+
+            <div class="progress-wrap">
+                <div class="progress-head">
+                    <span id="progress-label">Journey progress</span>
+                    <span id="progress-value">0%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+            </div>
+
+            <div class="health-banner">
+                <strong id="health-heading">Edge health</strong>
+                <p id="health-message">Waiting for the latest condition summary.</p>
+                <div class="chip-row" id="health-chips"></div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <label>Unique Product ID</label>
+                    <span id="product-uid-value">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Batch ID</label>
+                    <span id="batch-id-value">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Current Stage</label>
+                    <span id="current-stage">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Current Location</label>
+                    <span id="current-location">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Temperature</label>
+                    <span id="temperature">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Humidity</label>
+                    <span id="humidity">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Sensor ID</label>
+                    <span id="sensor-id">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Health Status</label>
+                    <span id="health-status">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Expected Temp Range</label>
+                    <span id="expected-temp">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Expected Humidity Range</label>
+                    <span id="expected-humidity">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Last Updated</label>
+                    <span id="updated-at">--</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="empty-card" id="empty-card">
+            <h3 id="empty-title">Find a Product</h3>
+            <p id="empty-message">Use a unique product ID to open the latest consumer-friendly tracking summary.</p>
+        </section>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8001';
+        const STAGES = ['field', 'warehouse', 'transport', 'retailer', 'consumer'];
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function setProgress(stage, label) {
+            const stageIndex = Math.max(STAGES.indexOf(stage), 0);
+            const pct = Math.round(((stageIndex + 1) / STAGES.length) * 100);
+            document.getElementById('progress-fill').style.width = `${pct}%`;
+            document.getElementById('progress-value').textContent = `${pct}%`;
+            document.getElementById('progress-label').textContent = label || `${stageIndex + 1} of ${STAGES.length} stages completed`;
+        }
+
+        function showEmpty(title, message) {
+            document.getElementById('track-card').style.display = 'none';
+            document.getElementById('empty-card').style.display = 'block';
+            document.getElementById('empty-title').textContent = title;
+            document.getElementById('empty-message').textContent = message;
+        }
+
+        function renderHealth(record) {
+            document.getElementById('health-heading').textContent = `Edge health: ${record.health_label}`;
+            document.getElementById('health-message').textContent = record.edge_decision || 'No edge decision available.';
+            const chipRow = document.getElementById('health-chips');
+
+            if (record.alerts && record.alerts.length) {
+                chipRow.innerHTML = record.alerts.map((alert) => `<span class="alert-chip">${escapeHtml(alert)}</span>`).join('');
+                return;
+            }
+
+            chipRow.innerHTML = '<span class="healthy-chip">Product readings are within the expected stage range.</span>';
+        }
+
+        function showTrackCard(record) {
+            document.getElementById('track-card').style.display = 'block';
+            document.getElementById('empty-card').style.display = 'none';
+
+            document.getElementById('product-name').textContent = record.product || record.product_name || `UID ${record.product_uid}`;
+            document.getElementById('uid-label').textContent = `Unique Product ID - ${record.product_uid}`;
+            document.getElementById('product-uid-value').textContent = record.product_uid || '--';
+            document.getElementById('batch-id-value').textContent = record.batch_id || '--';
+            document.getElementById('current-stage').innerHTML = `<span class="status-pill">${escapeHtml(record.current_stage_label || record.current_stage || '--')}</span>`;
+            document.getElementById('current-location').textContent = record.latitude !== null && record.longitude !== null
+                ? `${record.latitude}, ${record.longitude}`
+                : '--';
+            document.getElementById('temperature').textContent = record.temperature !== null && record.temperature !== undefined ? `${record.temperature}°C` : '--';
+            document.getElementById('humidity').textContent = record.humidity !== null && record.humidity !== undefined ? `${record.humidity}%` : '--';
+            document.getElementById('sensor-id').textContent = record.sensor_id || '--';
+            document.getElementById('health-status').textContent = record.health_label || record.risk_level || '--';
+            document.getElementById('expected-temp').textContent = record.expected_temperature_range || '--';
+            document.getElementById('expected-humidity').textContent = record.expected_humidity_range || '--';
+            document.getElementById('updated-at').textContent = record.timestamp || '--';
+
+            renderHealth(record);
+            setProgress(record.current_stage, record.journey_progress_label);
+        }
+
+        async function loadUidSuggestions() {
+            try {
+                const res = await fetch(`${API_BASE}/uids`);
+                const json = await res.json();
+                const options = document.getElementById('uid-options');
+                options.innerHTML = (json.uids || [])
+                    .map((item) => `<option value="${escapeHtml(item.product_uid)}">${escapeHtml(item.product)}</option>`)
+                    .join('');
+            } catch (error) {
+                // Keep page usable even if suggestions fail.
+            }
+        }
+
+        async function loadProduct(productUid, fallbackBatchId = '') {
+            if (!productUid && !fallbackBatchId) {
+                showEmpty('Find a Product', 'Use a unique product ID to open the latest consumer-friendly tracking summary.');
+                return;
+            }
+
+            if (productUid) {
+                document.getElementById('product-uid-input').value = productUid;
+            }
+
+            try {
+                let res;
+                if (productUid) {
+                    res = await fetch(`${API_BASE}/uid/${encodeURIComponent(productUid)}/current`);
+                }
+
+                if ((!res || !res.ok) && fallbackBatchId) {
+                    res = await fetch(`${API_BASE}/batch/${encodeURIComponent(fallbackBatchId)}/current`);
+                }
+
+                if (!res || !res.ok) {
+                    const target = productUid || fallbackBatchId;
+                    showEmpty('No data available', `No data available for ${target}.`);
+                    return;
+                }
+
+                const record = await res.json();
+                showTrackCard(record);
+            } catch (error) {
+                showEmpty('Tracking unavailable', 'Unable to reach the backend service right now.');
+            }
+        }
+
+        function searchProduct() {
+            const productUid = document.getElementById('product-uid-input').value.trim();
+            const nextUrl = `${window.location.pathname}?uid=${encodeURIComponent(productUid)}`;
+            window.history.replaceState({}, '', nextUrl);
+            loadProduct(productUid);
+        }
+
+        loadUidSuggestions();
+        const params = new URLSearchParams(window.location.search);
+        loadProduct(params.get('uid') || '', params.get('id') || '');
+    </script>
+</body>
+</html>
