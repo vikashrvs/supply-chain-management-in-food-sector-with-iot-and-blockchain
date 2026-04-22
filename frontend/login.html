@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodChain Login</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Inter:wght@300;400;500&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        .bg {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at 20% 50%, #1a1200 0%, #000 60%),
+                        radial-gradient(ellipse at 80% 20%, #1a0f00 0%, transparent 50%);
+            z-index: 0;
+        }
+
+        .grid {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(212, 175, 55, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(212, 175, 55, 0.04) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 0;
+        }
+
+        .glow {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+        }
+
+        .card {
+            position: relative;
+            z-index: 1;
+            background: rgba(15, 10, 0, 0.92);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 20px;
+            padding: 50px 45px;
+            width: 430px;
+            box-shadow: 0 0 60px rgba(212, 175, 55, 0.1), inset 0 1px 0 rgba(212, 175, 55, 0.1);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .logo-icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .logo h1 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: #D4AF37;
+            letter-spacing: 3px;
+        }
+
+        .logo p {
+            font-size: 11px;
+            color: #777;
+            letter-spacing: 2px;
+            margin-top: 5px;
+            text-transform: uppercase;
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.4), transparent);
+            margin-bottom: 35px;
+        }
+
+        .role-select {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 22px;
+        }
+
+        .role-btn {
+            padding: 10px;
+            background: transparent;
+            border: 1px solid #222;
+            border-radius: 10px;
+            color: #777;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .role-btn.active,
+        .role-btn:hover {
+            border-color: #D4AF37;
+            color: #D4AF37;
+            background: rgba(212, 175, 55, 0.06);
+            transform: translateY(-1px);
+        }
+
+        .role-hint {
+            min-height: 38px;
+            margin-bottom: 14px;
+            padding: 10px 14px;
+            border: 1px solid rgba(212, 175, 55, 0.12);
+            border-radius: 10px;
+            background: rgba(212, 175, 55, 0.04);
+            color: #b9a76b;
+            font-size: 12px;
+            line-height: 1.5;
+            transition: all 0.3s ease;
+        }
+
+        .fields {
+            display: grid;
+            gap: 14px;
+        }
+
+        .input-group {
+            transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease, margin 0.3s ease;
+            max-height: 120px;
+            opacity: 1;
+            transform: translateY(0);
+            overflow: hidden;
+        }
+
+        .input-group.hidden {
+            max-height: 0;
+            opacity: 0;
+            margin: 0;
+            transform: translateY(-6px);
+            pointer-events: none;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 11px;
+            color: #888;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid #222;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: rgba(212, 175, 55, 0.5);
+            background: rgba(212, 175, 55, 0.03);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.05);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #D4AF37, #B8860B);
+            border: none;
+            border-radius: 10px;
+            color: #000;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: 'Rajdhani', sans-serif;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin-top: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            background: linear-gradient(135deg, #F0C040, #D4AF37);
+            box-shadow: 0 5px 30px rgba(212, 175, 55, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .error {
+            color: #ff7070;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 12px;
+            display: none;
+        }
+
+        .footer-text {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 11px;
+            color: #444;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg"></div>
+<div class="grid"></div>
+<div class="glow"></div>
+
+<div class="card">
+    <div class="logo">
+        <span class="logo-icon">⚓</span>
+        <h1>FOODCHAIN</h1>
+        <p>Blockchain · IoT · Traceability</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="role-select">
+        <button class="role-btn active" data-role="admin" onclick="setRole(this, 'admin')">Admin</button>
+        <button class="role-btn" data-role="farmer" onclick="setRole(this, 'farmer')">Farmer</button>
+        <button class="role-btn" data-role="retailer" onclick="setRole(this, 'retailer')">Retailer</button>
+        <button class="role-btn" data-role="consumer" onclick="setRole(this, 'consumer')">Consumer</button>
+    </div>
+
+    <div class="role-hint" id="role-hint">
+        Authorized users can sign in and access the internal system dashboard.
+    </div>
+
+    <div class="fields">
+        <div class="input-group" id="username-group">
+            <label>Username</label>
+            <input type="text" id="username" placeholder="Enter username" />
+        </div>
+
+        <div class="input-group" id="password-group">
+            <label>Password</label>
+            <input type="password" id="password" placeholder="Enter password" />
+        </div>
+
+        <div class="input-group hidden" id="product-group">
+            <label>Enter Unique Product ID</label>
+            <input type="text" id="product-id" placeholder="Enter UID from QR or dashboard" />
+        </div>
+    </div>
+
+    <button class="login-btn" id="action-btn" onclick="submitAction()">Access System</button>
+    <div class="error" id="error">Invalid credentials. Try again.</div>
+
+    <div class="footer-text">Farm to Fork · Secured by Blockchain</div>
+</div>
+
+<script>
+    let selectedRole = 'admin';
+
+    function setRole(btn, role) {
+        document.querySelectorAll('.role-btn').forEach((button) => button.classList.remove('active'));
+        btn.classList.add('active');
+        selectedRole = role;
+
+        const consumerMode = role === 'consumer';
+        document.getElementById('username-group').classList.toggle('hidden', consumerMode);
+        document.getElementById('password-group').classList.toggle('hidden', consumerMode);
+        document.getElementById('product-group').classList.toggle('hidden', !consumerMode);
+        document.getElementById('action-btn').textContent = consumerMode ? 'Track Product' : 'Access System';
+        document.getElementById('error').style.display = 'none';
+        document.getElementById('role-hint').textContent = consumerMode
+            ? 'Consumers do not need an account. Enter the unique product ID to open the live tracking page.'
+            : 'Authorized users can sign in and access the internal system dashboard.';
+    }
+
+    function submitAction() {
+        const error = document.getElementById('error');
+        error.style.display = 'none';
+
+        if (selectedRole === 'consumer') {
+            const productId = document.getElementById('product-id').value.trim();
+            if (!productId) {
+                error.textContent = 'Enter a unique product ID to continue.';
+                error.style.display = 'block';
+                return;
+            }
+            window.location.href = `track.html?uid=${encodeURIComponent(productId)}`;
+            return;
+        }
+
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const creds = {
+            admin: { u: 'admin', p: 'admin123' },
+            farmer: { u: 'farmer', p: 'farmer123' },
+            retailer: { u: 'retailer', p: 'retail123' }
+        };
+
+        const current = creds[selectedRole];
+        if (current && username === current.u && password === current.p) {
+            localStorage.setItem('role', selectedRole);
+            window.location.href = 'home.html';
+            return;
+        }
+
+        error.textContent = 'Invalid credentials. Try again.';
+        error.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
