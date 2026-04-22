@@ -1,0 +1,1 @@
+{ "name": "foodchain", "version": "1.0.0", "main": "foodchain.js", "scripts": { "start": "node foodchain.js" }, "dependencies": { "fabric-contract-api": "^2.5.5", "fabric-shim": "^2.5.5" } }
