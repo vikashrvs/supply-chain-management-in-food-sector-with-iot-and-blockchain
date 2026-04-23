@@ -188,7 +188,6 @@ def get_last_hash(batch_id):
 
 
 def compute_block_hash(record, prev_hash):
-    """Compute SHA256 hash linking this record to the previous one."""
     data = (
         f"{prev_hash}"
         f"{record['batch_id']}"
