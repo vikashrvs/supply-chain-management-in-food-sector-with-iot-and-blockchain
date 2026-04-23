@@ -1,7 +1,7 @@
+import hashlib
 import json
 import random
 import time
-import uuid
 from datetime import datetime
 
 import paho.mqtt.client as mqtt
@@ -30,10 +30,15 @@ STAGE_LOCATIONS = {
     "consumer": {"lat": 13.070000, "lng": 77.690000},
 }
 
+
+def stable_uid(batch_id):
+    return "UID-" + hashlib.md5(batch_id.encode()).hexdigest()[:12].upper()
+
+
 BATCHES = [
     {
         "batch_id": "BATCH_001",
-        "product_uid": f"UID-{uuid.uuid4().hex[:12].upper()}",
+        "product_uid": stable_uid("BATCH_001"),
         "product": "Apples",
         "sensor_id": "SENSOR_A",
         "lat_offset": 0.0000,
@@ -42,7 +47,7 @@ BATCHES = [
     },
     {
         "batch_id": "BATCH_002",
-        "product_uid": f"UID-{uuid.uuid4().hex[:12].upper()}",
+        "product_uid": stable_uid("BATCH_002"),
         "product": "Mangoes",
         "sensor_id": "SENSOR_B",
         "lat_offset": 0.0120,
@@ -51,7 +56,7 @@ BATCHES = [
     },
     {
         "batch_id": "BATCH_003",
-        "product_uid": f"UID-{uuid.uuid4().hex[:12].upper()}",
+        "product_uid": stable_uid("BATCH_003"),
         "product": "Wheat",
         "sensor_id": "SENSOR_C",
         "lat_offset": -0.0100,
@@ -121,7 +126,7 @@ def publish_batch(client, batch):
     payload = build_payload(batch)
     topic = f"food/sensor/{payload['batch_id']}"
     client.publish(topic, json.dumps(payload))
-    print(f"Published to {topic}: {payload}")
+    print(f"Published to {topic}: stage={payload['current_stage']} temp={payload['temperature']} uid={payload['product_uid']}")
     batch["tick"] = (batch["tick"] + 1) % (len(STAGES) * STAGE_ADVANCE_INTERVAL)
 
 
@@ -131,6 +136,7 @@ def main():
     client.loop_start()
 
     print("Food supply chain sensor simulation started...")
+    print(f"Stable UIDs: {[b['product_uid'] for b in BATCHES]}")
 
     try:
         while True:
