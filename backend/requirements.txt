@@ -1,4 +1,6 @@
 fastapi
 uvicorn
-aiofiles
 paho-mqtt
+python-jose[cryptography]
+bcrypt
+pydantic

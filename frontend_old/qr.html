@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodChain QR Tracker</title>
+    <meta name="description" content="Generate consumer QR codes for blockchain-tracked food products. Scan to verify supply chain authenticity.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-card: #141414;
+            --bg-elevated: #1a1a1a;
+            --gold: #D4AF37;
+            --gold-dark: #B8960C;
+            --gold-light: #E8C84A;
+            --gold-glow: rgba(212, 175, 55, 0.15);
+            --gold-border: rgba(212, 175, 55, 0.3);
+            --text-primary: #ffffff;
+            --text-secondary: #aaaaaa;
+            --text-muted: #555555;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --line: rgba(212, 175, 55, 0.12);
+            --panel: rgba(10, 7, 0, 0.88);
+            --shadow: 0 20px 50px rgba(0,0,0,0.35);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            background:
+                radial-gradient(ellipse 60% 50% at 5% 60%, rgba(212,175,55,0.07) 0%, transparent 50%),
+                var(--bg-primary);
+        }
+
+        /* Background grid */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(212,175,55,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(212,175,55,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: 250px;
+            display: flex;
+            flex-direction: column;
+            padding: 30px 0;
+            background: rgba(6, 4, 0, 0.97);
+            border-right: 1px solid var(--line);
+            z-index: 100;
+        }
+
+        .sidebar-logo {
+            padding: 0 24px 26px;
+            border-bottom: 1px solid var(--line);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(212,175,55,0.3);
+        }
+
+        .nav-section { padding: 20px 0; }
+
+        .nav-label {
+            padding: 0 24px;
+            margin-bottom: 6px;
+            font-size: 9px;
+            color: rgba(255,255,255,0.2);
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 24px;
+            color: rgba(255,255,255,0.35);
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            transition: all 0.25s ease;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+        .nav-item:hover,
+        .nav-item.active {
+            color: var(--gold);
+            background: rgba(212,175,55,0.06);
+            border-left-color: var(--gold);
+        }
+
+        .nav-item.active {
+            background: rgba(212,175,55,0.08);
+            box-shadow: inset 0 0 20px rgba(212,175,55,0.03);
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 20px 24px 0;
+            border-top: 1px solid var(--line);
+            font-size: 12px;
+            color: rgba(255,255,255,0.35);
+        }
+
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 12px rgba(34,197,94,0.7);
+            animation: dot-pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes dot-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        /* ===== MAIN ===== */
+        .main {
+            position: relative;
+            z-index: 1;
+            margin-left: 250px;
+            width: calc(100% - 250px);
+            padding: 36px;
+            min-height: 100vh;
+        }
+
+        /* ===== TOPBAR ===== */
+        .topbar {
+            margin-bottom: 28px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .topbar h1 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 38px;
+            letter-spacing: 2px;
+            font-weight: 700;
+        }
+
+        .topbar h1 span { color: var(--gold); text-shadow: 0 0 40px rgba(212,175,55,0.4); }
+
+        .topbar p {
+            margin-top: 8px;
+            max-width: 760px;
+            color: rgba(168,157,128,0.9);
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        /* ===== CONTENT GRID ===== */
+        .content-grid {
+            display: grid;
+            grid-template-columns: minmax(320px, 430px) minmax(0, 1fr);
+            gap: 22px;
+            margin-top: 24px;
+        }
+
+        /* ===== CARDS ===== */
+        .card {
+            border-radius: 22px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            box-shadow: var(--shadow);
+            padding: 26px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(212,175,55,0.4), transparent);
+        }
+
+        .card:hover { border-color: rgba(212,175,55,0.2); }
+
+        .card h2 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 22px;
+            color: var(--gold);
+            letter-spacing: 1.5px;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        /* ===== FORM ===== */
+        .form-grid { display: grid; gap: 16px; }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(212,175,55,0.12);
+            background: rgba(255,255,255,0.03);
+            color: var(--text-primary);
+            outline: none;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s;
+        }
+
+        .input-group input::placeholder { color: rgba(255,255,255,0.2); }
+
+        .input-group input:focus {
+            border-color: rgba(212,175,55,0.45);
+            background: rgba(212,175,55,0.03);
+            box-shadow: 0 0 0 3px rgba(212,175,55,0.08);
+        }
+
+        .generate-btn {
+            margin-top: 4px;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+            color: #000;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .generate-btn:hover {
+            box-shadow: 0 8px 28px rgba(212,175,55,0.4);
+            transform: translateY(-2px);
+        }
+
+        .helper-text {
+            margin-top: 14px;
+            color: rgba(168,157,128,0.9);
+            line-height: 1.65;
+            font-size: 12px;
+            padding: 10px 14px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .helper-text.error {
+            color: #ffa0a0;
+            border-color: rgba(239,68,68,0.2);
+            background: rgba(239,68,68,0.05);
+        }
+
+        /* ===== QR SHELL ===== */
+        .qr-shell { display: grid; gap: 20px; }
+
+        .qr-display {
+            text-align: center;
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px dashed rgba(212,175,55,0.2);
+            background: rgba(255,255,255,0.01);
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        /* Animated corner borders on QR display */
+        .qr-display::before,
+        .qr-display::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-color: var(--gold);
+            border-style: solid;
+        }
+
+        .qr-display::before {
+            top: 8px; left: 8px;
+            border-width: 2px 0 0 2px;
+        }
+
+        .qr-display::after {
+            bottom: 8px; right: 8px;
+            border-width: 0 2px 2px 0;
+        }
+
+        .qr-placeholder {
+            min-height: 220px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            line-height: 1.65;
+            padding: 20px;
+            gap: 12px;
+        }
+
+        .qr-placeholder .qr-icon { font-size: 48px; opacity: 0.4; }
+
+        #qrcode {
+            display: inline-block;
+            padding: 16px;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 0 40px rgba(212,175,55,0.3);
+            animation: qr-appear 0.4s ease;
+        }
+
+        @keyframes qr-appear {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .tracking-url {
+            margin-top: 16px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: rgba(212,175,55,0.06);
+            border: 1px solid rgba(212,175,55,0.15);
+            color: var(--gold);
+            line-height: 1.6;
+            word-break: break-all;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            text-align: left;
+        }
+
+        /* Print button */
+        .qr-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--gold-border);
+            border-radius: 10px;
+            background: transparent;
+            color: var(--gold);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover {
+            background: var(--gold-glow);
+            box-shadow: 0 4px 16px rgba(212,175,55,0.2);
+        }
+
+        /* ===== SNAPSHOT GRID ===== */
+        .snapshot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+            gap: 12px;
+        }
+
+        .info-card {
+            padding: 16px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.02);
+            transition: all 0.3s;
+        }
+
+        .info-card:hover {
+            border-color: rgba(212,175,55,0.2);
+            background: rgba(212,175,55,0.03);
+        }
+
+        .info-card label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .info-card span {
+            display: block;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 20px;
+            color: rgba(241,224,167,0.9);
+            line-height: 1.35;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .status-pill, .alert-chip, .healthy-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .status-pill {
+            color: var(--gold);
+            background: rgba(212,175,55,0.1);
+            border: 1px solid rgba(212,175,55,0.2);
+        }
+
+        .alert-chip {
+            color: #ffd5c6;
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.18);
+        }
+
+        .healthy-chip {
+            color: var(--success);
+            background: rgba(34,197,94,0.08);
+            border: 1px solid rgba(34,197,94,0.18);
+        }
+
+        @media (max-width: 980px) { .content-grid { grid-template-columns: 1fr; } }
+
+        @media (max-width: 860px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--line); flex-direction: row; padding: 16px; flex-wrap: wrap; }
+            body { flex-direction: column; }
+            .main { margin-left: 0; width: 100%; padding: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo">⛓️ FOODCHAIN</div>
+        <nav class="nav-section">
+            <div class="nav-label">Main Menu</div>
+            <a href="home.html" class="nav-item"><span class="nav-icon">🏠</span> Home</a>
+            <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+            <a href="qr.html" class="nav-item active"><span class="nav-icon">🏷️</span> QR Tracker</a>
+        </nav>
+        <nav class="nav-section">
+            <div class="nav-label">System</div>
+            <a href="#" class="nav-item"><span class="nav-icon">🔑</span> Unique Product IDs</a>
+            <a href="track.html" class="nav-item"><span class="nav-icon">🔍</span> Consumer Access</a>
+            <a href="#" class="nav-item"><span class="nav-icon">📡</span> Edge Health</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="status-row"><span class="dot"></span> QR service ready</div>
+            <div style="font-size:10px;margin-top:4px;opacity:0.5;">MQTT · Blockchain · IoT</div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="topbar">
+            <h1>QR <span>TRACKER</span></h1>
+            <p>Generate consumer QR codes using a unique product ID. Select a live UID from the backend suggestions and the matching product details will load automatically.</p>
+        </div>
+
+        <div class="content-grid">
+            <section class="card">
+                <h2>🏷️ Generate Consumer QR</h2>
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label>Public Frontend Host</label>
+                        <input type="text" id="public-host" placeholder="127.0.0.1:8001">
+                    </div>
+                    <div class="input-group">
+                        <label>Unique Product ID</label>
+                        <input type="text" id="product-uid" placeholder="Select a live UID" list="uid-options">
+                        <datalist id="uid-options"></datalist>
+                    </div>
+                    <div class="input-group">
+                        <label>Product Name</label>
+                        <input type="text" id="product-name" placeholder="Auto loaded from backend">
+                    </div>
+                    <div class="input-group">
+                        <label>Batch ID</label>
+                        <input type="text" id="batch-id" placeholder="Auto loaded from backend">
+                    </div>
+                    <div class="input-group">
+                        <label>Current Stage</label>
+                        <input type="text" id="current-stage" placeholder="Auto loaded from backend">
+                    </div>
+                    <button class="generate-btn" onclick="generateQR()">⚡ Generate QR Code</button>
+                </div>
+                <p class="helper-text" id="qr-status">Waiting to load live product UIDs from the backend.</p>
+            </section>
+
+            <section class="qr-shell">
+                <div class="card">
+                    <h2>📱 Public Tracking QR</h2>
+                    <div class="qr-display">
+                        <div class="qr-placeholder" id="qr-placeholder">
+                            <span class="qr-icon">⬛</span>
+                            Generate a QR code that opens the public tracking page for a unique product ID.
+                        </div>
+                        <div id="qrcode" style="display:none"></div>
+                        <div class="tracking-url" id="tracking-url">Tracking URL will appear here.</div>
+                    </div>
+                    <div class="qr-actions">
+                        <button class="action-btn" onclick="window.print()">🖨️ Print</button>
+                        <button class="action-btn" onclick="downloadQR()">⬇️ Download</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>📊 Live Product Snapshot</h2>
+                    <div class="snapshot-grid">
+                        <div class="info-card">
+                            <label>Unique ID</label>
+                            <span id="info-uid">--</span>
+                        </div>
+                        <div class="info-card">
+                            <label>Product</label>
+                            <span id="info-product">--</span>
+                        </div>
+                        <div class="info-card">
+                            <label>Batch</label>
+                            <span id="info-batch">--</span>
+                        </div>
+                        <div class="info-card">
+                            <label>Current Stage</label>
+                            <span id="info-stage">--</span>
+                        </div>
+                        <div class="info-card">
+                            <label>Temperature</label>
+                            <span id="info-temp">--</span>
+                        </div>
+                        <div class="info-card">
+                            <label>Humidity</label>
+                            <span id="info-humidity">--</span>
+                        </div>
+                    </div>
+                    <div class="chip-row" id="snapshot-health"></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8001';
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function setStatus(message, isError = false) {
+            const element = document.getElementById('qr-status');
+            element.textContent = message;
+            element.className = isError ? 'helper-text error' : 'helper-text';
+        }
+
+        function getTrackUrl(productUid) {
+            const hostInput = document.getElementById('public-host').value.trim();
+            const host = hostInput || '127.0.0.1:8001';
+            return `http://${host}/track.html?uid=${encodeURIComponent(productUid)}`;
+        }
+
+        async function loadUidDirectory() {
+            try {
+                const res = await fetch(`${API_BASE}/uids`);
+                const json = await res.json();
+                const items = json.uids || [];
+                const list = document.getElementById('uid-options');
+                list.innerHTML = '';
+
+                items.forEach((item) => {
+                    list.innerHTML += `<option value="${escapeHtml(item.product_uid)}">${escapeHtml(item.product)}</option>`;
+                });
+
+                if (items.length && !document.getElementById('product-uid').value) {
+                    document.getElementById('product-uid').value = items[0].product_uid;
+                }
+
+                setStatus(
+                    items.length
+                        ? 'Select a live unique product ID and generate a consumer QR.'
+                        : 'No live product UIDs found yet. Start the simulator first.',
+                    !items.length
+                );
+            } catch (error) {
+                setStatus('Unable to load live unique product IDs from the backend.', true);
+            }
+        }
+
+        async function fetchUid(productUid) {
+            const res = await fetch(`${API_BASE}/uid/${encodeURIComponent(productUid)}/current`);
+            if (!res.ok) {
+                return null;
+            }
+            return res.json();
+        }
+
+        function renderSnapshot(record) {
+            document.getElementById('product-name').value = record.product || record.product_name || '';
+            document.getElementById('batch-id').value = record.batch_id || '';
+            document.getElementById('current-stage').value = record.current_stage_label || record.current_stage || '';
+            document.getElementById('info-uid').textContent = record.product_uid || '--';
+            document.getElementById('info-product').textContent = record.product || record.product_name || '--';
+            document.getElementById('info-batch').textContent = record.batch_id || '--';
+            document.getElementById('info-stage').textContent = record.current_stage_label || record.current_stage || '--';
+            document.getElementById('info-temp').textContent = record.temperature !== null && record.temperature !== undefined ? `${record.temperature}°C` : '--';
+            document.getElementById('info-humidity').textContent = record.humidity !== null && record.humidity !== undefined ? `${record.humidity}%` : '--';
+
+            const health = document.getElementById('snapshot-health');
+            if (record.alerts && record.alerts.length) {
+                health.innerHTML = [
+                    `<span class="status-pill">${escapeHtml(record.health_label)}</span>`,
+                    ...record.alerts.map((alert) => `<span class="alert-chip">⚠️ ${escapeHtml(alert)}</span>`)
+                ].join('');
+            } else {
+                health.innerHTML = '<span class="healthy-chip">✓ Product readings are within the expected stage range.</span>';
+            }
+        }
+
+        async function generateQR() {
+            const productUid = document.getElementById('product-uid').value.trim();
+            if (!productUid) {
+                setStatus('Enter a valid unique product ID before generating the QR code.', true);
+                return;
+            }
+
+            const record = await fetchUid(productUid);
+            if (!record) {
+                setStatus(`Unique product ID ${productUid} is not available in the backend yet.`, true);
+                return;
+            }
+
+            const qrcode = document.getElementById('qrcode');
+            qrcode.innerHTML = '';
+            document.getElementById('qr-placeholder').style.display = 'none';
+            qrcode.style.display = 'inline-block';
+
+            const trackUrl = getTrackUrl(record.product_uid);
+            new QRCode(qrcode, {
+                text: trackUrl,
+                width: 180,
+                height: 180,
+                colorDark: '#000000',
+                colorLight: '#ffffff'
+            });
+
+            document.getElementById('tracking-url').textContent = trackUrl;
+            renderSnapshot(record);
+            setStatus(`QR generated for ${record.product_uid}. Consumers can scan it to open the matching product details.`);
+        }
+
+        function downloadQR() {
+            const canvas = document.querySelector('#qrcode canvas');
+            if (!canvas) { setStatus('Generate a QR code first.', true); return; }
+            const link = document.createElement('a');
+            link.download = `foodchain-qr-${document.getElementById('product-uid').value}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        document.getElementById('public-host').value = '127.0.0.1:8001';
+        loadUidDirectory();
+    </script>
+</body>
+</html>

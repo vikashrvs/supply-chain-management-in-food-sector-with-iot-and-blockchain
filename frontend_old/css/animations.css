@@ -1,0 +1,175 @@
+/* =============================================================
+   animations.css — FoodChain Login Page
+   All keyframe animations and motion design
+   ============================================================= */
+
+/* ─── PAGE ENTRANCE ───────────────────────────────────────────── */
+@keyframes fc-fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.greeting      { animation: fc-fade-up 0.55s 0.05s cubic-bezier(0.25,0.8,0.25,1) both; }
+.role-selector { animation: fc-fade-up 0.55s 0.15s cubic-bezier(0.25,0.8,0.25,1) both; }
+.login-card    { animation: fc-fade-up 0.55s 0.25s cubic-bezier(0.25,0.8,0.25,1) both; }
+.footer        { animation: fc-fade-up 0.55s 0.35s cubic-bezier(0.25,0.8,0.25,1) both; }
+
+/* ─── NAMASTE FLOAT ───────────────────────────────────────────── */
+@keyframes fc-float {
+  0%, 100% {
+    transform: translateY(0);
+    filter: drop-shadow(0 0 18px rgba(34,197,94,0.32));
+  }
+  50% {
+    transform: translateY(-10px);
+    filter: drop-shadow(0 0 32px rgba(34,197,94,0.58));
+  }
+}
+
+.namaste {
+  animation: fc-float 4.2s ease-in-out infinite;
+}
+
+.hands-svg {
+  animation: fc-float 4.2s ease-in-out infinite 0.25s;
+}
+
+/* ─── BRAND LOGO PULSE ────────────────────────────────────────── */
+@keyframes fc-logo-glow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(34,197,94,0.5)); }
+  50%       { filter: drop-shadow(0 0 18px rgba(34,197,94,0.85)); }
+}
+
+.brand-logo { animation: fc-logo-glow 3s ease-in-out infinite; }
+
+/* ─── DOT PULSE ───────────────────────────────────────────────── */
+@keyframes fc-dot {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%       { transform: scale(1.6); opacity: 0.65; }
+}
+
+.dot-pulse             { animation: fc-dot 2.2s ease-in-out infinite; }
+.dot-pulse:last-child  { animation-delay: 0.4s; }
+
+/* ─── ROLE CARD ACTIVE GLOW ───────────────────────────────────── */
+@keyframes fc-card-glow {
+  0%, 100% { box-shadow: 0 0 8px  rgba(var(--role-rgb), 0.09), inset 0 0 8px  rgba(var(--role-rgb), 0.03); }
+  50%       { box-shadow: 0 0 22px rgba(var(--role-rgb), 0.18), inset 0 0 14px rgba(var(--role-rgb), 0.06); }
+}
+
+/* Applied by roleSwitcher.js */
+.role-card.active { animation: fc-card-glow 3s ease-in-out infinite; }
+
+/* ─── CARD CONTENT TRANSITION ─────────────────────────────────── */
+@keyframes fc-out {
+  from { opacity: 1; transform: translateY(0);   }
+  to   { opacity: 0; transform: translateY(-7px); }
+}
+
+@keyframes fc-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* Classes applied temporarily by roleSwitcher.js */
+.fc-exiting .card-header,
+.fc-exiting .login-form {
+  animation: fc-out 0.2s ease forwards;
+}
+
+.fc-entering .card-header,
+.fc-entering .login-form {
+  animation: fc-in 0.3s ease forwards;
+}
+
+/* ─── ROLE ICON BOUNCE ────────────────────────────────────────── */
+@keyframes fc-icon-bounce {
+  0%   { transform: scale(0.65); opacity: 0; }
+  55%  { transform: scale(1.1);  opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+.card-role-icon.fc-bounce {
+  animation: fc-icon-bounce 0.32s cubic-bezier(0.25,0.8,0.25,1) forwards;
+}
+
+/* ─── RIPPLE EXPAND ───────────────────────────────────────────── */
+@keyframes fc-ripple {
+  from {
+    width: 0; height: 0;
+    opacity: 0.55;
+  }
+  to {
+    width: 440px; height: 440px;
+    opacity: 0;
+  }
+}
+
+.btn-ripple.is-rippling {
+  animation: fc-ripple 0.58s ease-out forwards;
+}
+
+/* ─── LOGIN CARD GLASS SHINE ──────────────────────────────────── */
+@keyframes fc-shine {
+  0%   { transform: translateX(-130%); opacity: 0; }
+  30%  { opacity: 1; }
+  100% { transform: translateX(200%);  opacity: 0; }
+}
+
+/* Triggered on card hover via CSS */
+.login-card:hover .card-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+  animation: fc-shine 1.1s ease-in-out;
+}
+
+/* ─── FIELD FOCUS PULSE ───────────────────────────────────────── */
+@keyframes fc-focus-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(var(--role-rgb), 0.08); }
+  50%       { box-shadow: 0 0 0 4px rgba(var(--role-rgb), 0.16); }
+}
+
+.field-input:focus {
+  animation: fc-focus-pulse 2s ease-in-out infinite;
+}
+
+/* ─── ALERT SLIDE IN ──────────────────────────────────────────── */
+@keyframes fc-alert-in {
+  from { opacity: 0; transform: translateY(-6px); max-height: 0; }
+  to   { opacity: 1; transform: translateY(0);    max-height: 80px; }
+}
+
+.alert { animation: fc-alert-in 0.22s ease forwards; overflow: hidden; }
+
+/* ─── SPINNER ─────────────────────────────────────────────────── */
+@keyframes fc-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.fa-spin { animation: fc-spin 0.75s linear infinite; }
+
+/* ─── GLASS BTN ICON JIGGLE ───────────────────────────────────── */
+@keyframes fc-jiggle {
+  0%   { transform: scale(1) rotate(0deg); }
+  30%  { transform: scale(1.15) rotate(-8deg); }
+  60%  { transform: scale(1.08) rotate(6deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.glass-btn:hover i {
+  animation: fc-jiggle 0.35s ease-in-out;
+}
+
+/* ─── CHECKBOX CHECK APPEAR ───────────────────────────────────── */
+@keyframes fc-check {
+  from { transform: scale(0) rotate(45deg); opacity: 0; }
+  to   { transform: scale(1) rotate(45deg); opacity: 1; }
+}
+
+.remember-label input[type="checkbox"]:checked::after {
+  animation: fc-check 0.18s ease forwards;
+}

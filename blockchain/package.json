@@ -1,0 +1,13 @@
+{
+  "name": "foodchain-fabric-client",
+  "version": "1.0.0",
+  "description": "Hyperledger Fabric Gateway client for FoodChain SCM",
+  "main": "submit_transaction.js",
+  "scripts": {
+    "submit": "node submit_transaction.js"
+  },
+  "dependencies": {
+    "@hyperledger/fabric-gateway": "^1.4.0",
+    "@grpc/grpc-js": "^1.10.0"
+  }
+}

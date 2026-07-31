@@ -1,0 +1,160 @@
+/* =============================================================
+   responsive.css — FoodChain Login Page
+   Desktop-first, scaling down through all breakpoints
+   Supports: 1920 · 1600 · 1440 · 1366 · 1280 · 1024 · 768 · 480px
+   ============================================================= */
+
+/* ─── 1920px+ (large displays) ───────────────────────────────── */
+@media (min-width: 1921px) {
+  .main        { gap: 30px; padding: 80px 20px 110px; }
+  .namaste     { font-size: 92px; }
+  .hands-svg   { width: 72px; height: 78px; }
+  .login-card  { width: 620px; }
+  .role-selector { max-width: 700px; }
+}
+
+/* ─── 1600px ──────────────────────────────────────────────────── */
+@media (max-width: 1600px) {
+  .namaste  { font-size: 78px; }
+  .login-card { width: 570px; }
+}
+
+/* ─── 1440px (design baseline) ───────────────────────────────── */
+@media (max-width: 1440px) {
+  .namaste  { font-size: 74px; }
+}
+
+/* ─── 1366px ──────────────────────────────────────────────────── */
+@media (max-width: 1366px) {
+  .namaste    { font-size: 70px; }
+  .hands-svg  { width: 58px; height: 62px; }
+  .login-card { padding: 30px 34px 26px; }
+}
+
+/* ─── 1280px ──────────────────────────────────────────────────── */
+@media (max-width: 1280px) {
+  .main       { padding: 68px 20px 90px; gap: 22px; }
+  .namaste    { font-size: 66px; }
+  .login-card { width: 540px; }
+}
+
+/* ─── 1024px ──────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .branding   { top: 16px; left: 18px; }
+  .main       { padding: 60px 16px 86px; gap: 20px; }
+  .namaste    { font-size: 60px; }
+  .hands-svg  { width: 52px; height: 56px; }
+  .login-card { width: 520px; padding: 28px 30px 24px; }
+  .role-selector { max-width: 520px; }
+
+  /* Make role cards tighter */
+  .rc-icon-wrap { width: 36px; height: 36px; font-size: 15px; }
+  .rc-name      { font-size: 12px; }
+  .rc-desc      { font-size: 9px; }
+}
+
+/* ─── 768px (tablet) ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .branding   { top: 14px; left: 14px; }
+  .brand-name { font-size: 15px; }
+
+  .main       { padding: 52px 16px 84px; gap: 18px; }
+  .namaste    { font-size: 52px; }
+  .hands-svg  { width: 46px; height: 50px; }
+  .login-sub  { font-size: 13.5px; }
+
+  /* Two-column role grid */
+  .role-cards-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    max-width: 440px;
+  }
+
+  .role-card    { padding: 14px 10px 12px; border-radius: 16px; }
+
+  /* Full-width login card */
+  .login-card   { width: 100%; border-radius: 18px; padding: 26px 22px 22px; }
+
+  /* QR buttons stacked */
+  .qr-section   { grid-template-columns: 1fr; }
+
+  /* Compact footer */
+  .badge-sep    { display: none; }
+  .badge-item   { padding: 2px 8px; }
+  .feature-badges { gap: 2px; }
+}
+
+/* ─── 600px ───────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .namaste  { font-size: 46px; }
+  .hands-svg { width: 42px; height: 46px; }
+
+  .login-card { padding: 22px 18px 20px; }
+  .card-role-icon { width: 44px; height: 44px; font-size: 18px; }
+  .card-title { font-size: 18px; }
+}
+
+/* ─── 480px (mobile) ─────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .branding   { top: 12px; left: 12px; gap: 8px; }
+  .brand-logo { width: 34px; height: 34px; }
+  .brand-name { font-size: 14px; }
+  .brand-tagline { font-size: 9px; }
+
+  .main       { padding: 44px 12px 80px; gap: 16px; }
+  .namaste    { font-size: 40px; }
+  .hands-svg  { width: 38px; height: 42px; }
+  .namaste-row { gap: 8px; }
+  .login-sub  { font-size: 12.5px; }
+
+  .selector-label { font-size: 10px; gap: 8px; }
+  .role-cards-row { gap: 6px; }
+  .role-card  {
+    padding: 11px 8px 10px;
+    border-radius: 14px;
+  }
+  .rc-icon-wrap { width: 32px; height: 32px; font-size: 14px; border-radius: 8px; }
+  .rc-name  { font-size: 11px; }
+  .rc-desc  { font-size: 8.5px; }
+
+  .login-card  { border-radius: 16px; padding: 20px 16px 18px; }
+  .card-title  { font-size: 17px; }
+  .card-subtitle { font-size: 12px; }
+
+  .field-input { padding: 12px 38px; font-size: 13px; }
+  .field-icon  { left: 12px; font-size: 12.5px; }
+  .eye-toggle  { right: 10px; }
+
+  .form-options { margin-bottom: 14px; }
+  .remember-label { font-size: 12px; }
+  .forgot-link    { font-size: 12px; }
+
+  .login-btn { padding: 13px 18px; font-size: 14px; }
+  .btn-arrow { width: 24px; height: 24px; font-size: 11px; }
+
+  .glass-btn { padding: 10px 8px; font-size: 12px; }
+
+  .auth-note  { font-size: 10.5px; }
+
+  .footer     { padding: 10px 12px; gap: 4px; }
+  .badge-item { font-size: 10px; padding: 2px 6px; }
+  .copyright  { font-size: 10px; }
+}
+
+/* ─── 360px (small phones) ───────────────────────────────────── */
+@media (max-width: 360px) {
+  .namaste    { font-size: 36px; }
+  .hands-svg  { width: 34px; height: 38px; }
+  .login-card { padding: 18px 14px 16px; }
+  .role-cards-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ─── REDUCED MOTION ──────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .namaste, .hands-svg, .brand-logo { animation: none !important; }
+}

@@ -1,652 +1,234 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FoodChain — Track Product & Supply Chain</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>FoodChain - Product Trace & Verification</title>
+    <meta name="description" content="Trace food products from farm to fork using blockchain-verified IoT data.">
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/glassmorphism.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap');
-
-        :root {
-            --bg: #f0f2f5;
-            --panel: #ffffff;
-            --panel-hover: #f5f7fa;
-            --accent: #1f3b5b;
-            --accent-light: #334e68;
-            --accent-glow: rgba(31, 59, 91, 0.12);
-            --line: #d0d8e0;
-            --text: #0f172a;
-            --muted: #64748b;
-            --success: #15803d;
-            --warning: #b45309;
-            --critical: #dc2626;
-            --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-            --highlight: #f3e8ff;
-            --progress: #d1d5db;
-            --progress-active: #1f3b5b;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--font-main); color: var(--text-body); min-height: 100vh; background: radial-gradient(ellipse 55% 40% at 10% 15%, rgba(59,130,246,0.1) 0%, transparent 50%), radial-gradient(ellipse 50% 40% at 90% 80%, rgba(34,197,94,0.1) 0%, transparent 50%), var(--bg-page); transition: background 0.35s ease, color 0.35s ease; }
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 68px; background: var(--card-bg); backdrop-filter: blur(20px); border-bottom: 1px solid var(--card-border); }
+        .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .brand-icon { width: 52px; height: 52px; background: linear-gradient(135deg, #22c55e, #15803d); border-radius: 12px; display: grid; place-items: center; font-size: 18px; color: #fff; box-shadow: 0 6px 16px rgba(34,197,94,0.3); }
+        .brand-text strong { display: block; font-family: var(--font-heading); font-size: 17px; font-weight: 700; color: var(--text-heading); line-height: 1.1; }
+        .brand-text span { font-size: 11px; color: var(--text-muted); }
+        .nav-links { display: flex; align-items: center; gap: 8px; }
+        .nav-link { padding: 7px 14px; border-radius: 9px; text-decoration: none; font-size: 14px; font-weight: 500; color: var(--text-muted); transition: all 0.2s ease; }
+        .nav-link:hover { color: var(--text-heading); background: rgba(34,197,94,0.08); }
+        .nav-link.active { color: #60a5fa; font-weight: 600; background: rgba(59,130,246,0.08); }
+        .nav-theme-btn { width: 38px; height: 38px; border-radius: 9px; border: 1px solid var(--card-border); background: var(--card-bg); cursor: pointer; display: grid; place-items: center; font-size: 16px; color: var(--text-muted); transition: all 0.2s ease; }
+        .nav-login-btn { padding: 8px 16px; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25); color: #4ade80; border-radius: 9px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+        .nav-login-btn:hover { background: rgba(34,197,94,0.2); }
+        [data-theme="light"] .nav-login-btn { color: #15803d; }
+        .page-shell { max-width: 960px; margin: 0 auto; padding: 108px 24px 80px; }
+        .page-hero { text-align: center; margin-bottom: 40px; }
+        .page-hero .tag { display: inline-flex; align-items: center; gap: 7px; padding: 5px 16px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25); border-radius: 999px; font-size: 12px; font-weight: 600; color: #60a5fa; margin-bottom: 18px; }
+        [data-theme="light"] .page-hero .tag { color: #2563eb; }
+        .page-hero h1 { font-family: var(--font-heading); font-size: clamp(26px, 4vw, 42px); font-weight: 800; color: var(--text-heading); letter-spacing: -0.5px; margin-bottom: 12px; }
+        .page-hero p { font-size: 15px; color: var(--text-muted); max-width: 500px; margin: 0 auto; line-height: 1.65; }
+        .search-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--card-border); border-radius: 22px; padding: 30px 28px; box-shadow: var(--card-shadow); margin-bottom: 24px; }
+        .search-label { font-size: 13px; font-weight: 600; color: var(--text-heading); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        .search-label i { color: #3b82f6; }
+        .search-row { display: flex; gap: 10px; }
+        .search-input { flex: 1; height: 52px; padding: 0 20px; background: rgba(255,255,255,0.05); border: 1.5px solid var(--card-border); border-radius: 14px; font-size: 15px; color: var(--text-heading); font-family: var(--font-main); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+        .search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59,130,246,0.12); }
+        .search-input::placeholder { color: var(--text-muted); }
+        [data-theme="light"] .search-input { background: var(--input-bg); border-color: var(--input-border); }
+        .search-btn { height: 52px; padding: 0 26px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; border: none; border-radius: 14px; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+        .search-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(59,130,246,0.4); }
+        .quick-ids { margin-top: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .quick-label { font-size: 12px; color: var(--text-muted); }
+        .quick-chip { padding: 4px 14px; background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); border-radius: 999px; font-size: 12px; font-weight: 600; color: #60a5fa; cursor: pointer; transition: all 0.2s; font-family: monospace; }
+        .quick-chip:hover { background: rgba(59,130,246,0.15); }
+        [data-theme="light"] .quick-chip { color: #2563eb; }
+        .result-section { display: none; } .result-section.visible { display: block; }
+        .loading-spinner { display: none; text-align: center; padding: 40px; } .loading-spinner.show { display: block; }
+        .spinner { width: 40px; height: 40px; border: 3px solid var(--card-border); border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-box { display: none; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 16px; padding: 16px 20px; color: #f87171; font-weight: 600; font-size: 14px; margin-bottom: 20px; align-items: center; gap: 12px; }
+        .error-box.show { display: flex; }
+        .chain-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+        .chain-title { font-family: var(--font-heading); font-size: 22px; font-weight: 800; color: var(--text-heading); }
+        .chain-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+        .badge-pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+        .pill-safe { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+        .pill-warn { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+        .pill-crit { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+        [data-theme="light"] .pill-safe { color: #15803d; } [data-theme="dark"] .pill-warn { color: #d97706; } [data-theme="dark"] .pill-crit { color: #dc2626; }
+        .metrics-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 22px; }
+        .metric-card { background: var(--card-bg); backdrop-filter: blur(16px); border: 1px solid var(--card-border); border-radius: 18px; padding: 20px 18px; box-shadow: var(--card-shadow); transition: transform 0.25s; }
+        .metric-card:hover { transform: translateY(-3px); }
+        .metric-icon { font-size: 22px; margin-bottom: 9px; }
+        .metric-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px; }
+        .metric-value { font-family: var(--font-heading); font-size: 24px; font-weight: 800; color: var(--text-heading); line-height: 1; }
+        .metric-sub { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+        .section-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--card-border); border-radius: 22px; padding: 24px 24px; box-shadow: var(--card-shadow); margin-bottom: 20px; }
+        .card-heading { font-family: var(--font-heading); font-size: 16px; font-weight: 700; color: var(--text-heading); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .ch-blue { color: #3b82f6; } .ch-green { color: #22c55e; } .ch-purple { color: #a855f7; } .ch-amber { color: #f59e0b; }
+        .journey-steps { display: flex; align-items: center; justify-content: center; gap: 0; overflow-x: auto; padding: 4px 0; }
+        .journey-step { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 14px 16px; border-radius: 16px; border: 2px solid var(--card-border); min-width: 95px; transition: all 0.3s; flex-shrink: 0; }
+        .journey-step.done { border-color: #22c55e; background: rgba(34,197,94,0.06); }
+        .journey-step.active { border-color: #3b82f6; background: rgba(59,130,246,0.08); transform: scale(1.06); box-shadow: 0 8px 24px rgba(59,130,246,0.2); }
+        .journey-step.pending { opacity: 0.35; }
+        .step-icon { font-size: 24px; } .step-name { font-size: 12px; font-weight: 700; color: var(--text-heading); } .step-status { font-size: 11px; color: var(--text-muted); } .step-check { font-size: 11px; color: #22c55e; font-weight: 700; }
+        .step-connector { font-size: 18px; color: var(--text-muted); padding: 0 4px; flex-shrink: 0; }
+        .loc-timeline { display: flex; flex-direction: column; gap: 0; }
+        .loc-entry { display: grid; grid-template-columns: 36px 1fr auto; gap: 0 14px; align-items: start; padding: 0 0 20px; position: relative; }
+        .loc-entry:last-child { padding-bottom: 0; }
+        .loc-entry:not(:last-child)::after { content: ''; position: absolute; left: 17px; top: 36px; bottom: -4px; width: 2px; background: linear-gradient(to bottom, rgba(34,197,94,0.8), rgba(34,197,94,0.1)); box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+        .loc-dot-wrap { display: flex; justify-content: center; padding-top: 6px; }
+        .loc-dot { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; border: 2px solid var(--card-border); background: var(--card-bg); flex-shrink: 0; z-index: 2; position: relative; }
+        .loc-dot.dot-done { border-color: #22c55e; background: rgba(34,197,94,0.15); box-shadow: 0 0 16px rgba(34,197,94,0.4); color: #22c55e; }
+        .loc-dot.dot-active { border-color: #3b82f6; background: rgba(59,130,246,0.12); box-shadow: 0 0 16px rgba(59,130,246,0.3); }
+        .loc-dot.dot-pending { opacity: 0.4; }
+        .loc-info { padding-top: 4px; }
+        .loc-stage { font-size: 14px; font-weight: 700; color: var(--text-heading); margin-bottom: 4px; }
+        .loc-address { font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
+        .loc-coords { font-family: monospace; font-size: 11px; color: #60a5fa; background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.15); border-radius: 6px; padding: 3px 10px; display: inline-block; }
+        [data-theme="light"] .loc-coords { color: #2563eb; }
+        .loc-time { font-size: 11px; color: var(--text-muted); padding-top: 6px; white-space: nowrap; }
+        .map-container { border-radius: 14px; overflow: hidden; height: 280px; border: 1px solid var(--card-border); }
+        .hash-block { background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: 14px; padding: 16px 18px; }
+        [data-theme="light"] .hash-block { background: var(--bg-page); }
+        .hash-row { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--card-border); }
+        .hash-row:last-child { border-bottom: none; }
+        .hash-key { font-size: 12px; font-weight: 700; color: var(--text-muted); min-width: 120px; padding-top: 2px; }
+        .hash-val { font-family: monospace; font-size: 12px; color: var(--text-heading); word-break: break-all; line-height: 1.5; }
+        .hv-green { color: #4ade80; } .hv-blue { color: #60a5fa; }
+        [data-theme="light"] .hv-green { color: #15803d; } [data-theme="dark"] .hv-blue { color: #2563eb; }
+        .sensor-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+        .sensor-table th { text-align: left; padding: 10px 14px; background: rgba(0,0,0,0.2); color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid var(--card-border); }
+        [data-theme="light"] .sensor-table th { background: var(--bg-page); }
+        .sensor-table td { padding: 12px 14px; border-bottom: 1px solid var(--card-border); color: var(--text-body); }
+        .sensor-table tr:last-child td { border-bottom: none; }
+        .sensor-table tr:hover td { background: rgba(59,130,246,0.04); }
+        @media (max-width: 680px) {
+            nav { padding: 0 16px; } .page-shell { padding: 98px 16px 60px; }
+            .search-row { flex-direction: column; } .journey-steps { justify-content: flex-start; }
+            #gps-grid { grid-template-columns: 1fr !important; }
         }
-
-        [data-theme="dark"] {
-            --bg: #0f172a;
-            --panel: #1e293b;
-            --panel-hover: #334155;
-            --accent: #60a5fa;
-            --accent-light: #93c5fd;
-            --accent-glow: rgba(96, 165, 250, 0.12);
-            --line: #334155;
-            --text: #f1f5f9;
-            --muted: #94a3b8;
-            --shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-            --highlight: #2d3748;
-            --progress: #4a5568;
-            --progress-active: #60a5fa;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            overflow-x: hidden;
-            transition: background 0.3s, color 0.3s;
-        }
-
-        /* ========== NAV ========== */
-        nav {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 48px;
-            background: var(--panel);
-            border-bottom: 1px solid var(--line);
-            box-shadow: var(--shadow);
-        }
-
-        .nav-logo {
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 700;
-            font-size: 20px;
-            letter-spacing: 2px;
-            color: var(--accent);
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 24px;
-            list-style: none;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: var(--muted);
-            font-size: 13px;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            transition: color 0.2s;
-            position: relative;
-        }
-
-        .nav-links a:hover, .nav-links a.active { color: var(--accent); }
-
-        /* ========== HERO SECTION ========== */
-        .hero {
-            padding: 48px;
-            background: linear-gradient(135deg, var(--accent-glow), transparent 60%);
-        }
-
-        .hero h1 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 36px;
-            font-weight: 700;
-            margin-bottom: 12px;
-        }
-
-        .hero p {
-            color: var(--muted);
-            font-size: 15px;
-            max-width: 600px;
-            line-height: 1.6;
-            margin-bottom: 24px;
-        }
-
-        .search-bar {
-            display: flex;
-            gap: 12px;
-            max-width: 600px;
-        }
-
-        .search-bar input {
-            flex: 1;
-            padding: 14px 20px;
-            border-radius: 12px;
-            border: 1px solid var(--line);
-            background: var(--panel);
-            color: var(--text);
-            font-size: 15px;
-            outline: none;
-            transition: box-shadow 0.2s, border-color 0.2s;
-        }
-
-        .search-bar input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 4px var(--accent-glow);
-        }
-
-        .search-bar button {
-            padding: 14px 28px;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        .search-bar button:hover { opacity: 0.9; }
-
-        /* ========== MAP & TIMELINE GRID ========== */
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr 380px;
-            gap: 32px;
-            padding: 0 48px 48px;
-        }
-
-        @media (max-width: 1024px) {
-            .main-grid { grid-template-columns: 1fr; }
-        }
-
-        /* ========== MAP ========== */
-        .map-card {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: var(--shadow);
-        }
-
-        .map-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--line);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .map-header h3 {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 18px;
-            letter-spacing: 1px;
-        }
-
-        #map {
-            height: 500px;
-            width: 100%;
-        }
-
-        /* ========== TIMELINE ========== */
-        .timeline-card {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 20px;
-            padding: 24px;
-            box-shadow: var(--shadow);
-            height: fit-content;
-        }
-
-        .timeline-card h3 {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 18px;
-            letter-spacing: 1px;
-            margin-bottom: 24px;
-        }
-
-        .timeline {
-            position: relative;
-            padding-left: 24px;
-        }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 7px;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: var(--line);
-        }
-
-        .timeline-item {
-            position: relative;
-            margin-bottom: 32px;
-            animation: slideIn 0.5s ease forwards;
-            opacity: 0;
-            transform: translateX(-20px);
-        }
-
-        .timeline-item:nth-child(1) { animation-delay: 0.1s; }
-        .timeline-item:nth-child(2) { animation-delay: 0.2s; }
-        .timeline-item:nth-child(3) { animation-delay: 0.3s; }
-        .timeline-item:nth-child(4) { animation-delay: 0.4s; }
-        .timeline-item:nth-child(5) { animation-delay: 0.5s; }
-
-        .timeline-dot {
-            position: absolute;
-            left: -21px;
-            top: 4px;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: var(--progress);
-            border: 3px solid var(--panel);
-            box-shadow: 0 0 0 2px var(--progress);
-            transition: all 0.3s;
-        }
-
-        .timeline-item.active .timeline-dot {
-            background: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-glow), 0 0 12px var(--accent);
-        }
-
-        .timeline-item.completed .timeline-dot {
-            background: var(--success);
-            box-shadow: 0 0 0 2px var(--success);
-        }
-
-        .timeline-content h4 {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .timeline-content p {
-            font-size: 12px;
-            color: var(--muted);
-        }
-
-        .timeline-meta {
-            display: flex;
-            gap: 12px;
-            margin-top: 8px;
-            font-size: 11px;
-            color: var(--muted);
-        }
-
-        .timeline-tag {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            background: var(--accent-glow);
-            color: var(--accent);
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        @keyframes slideIn {
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        /* ========== HEALTH SCORE ========== */
-        .health-card {
-            margin-top: 24px;
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 20px;
-            padding: 24px;
-            box-shadow: var(--shadow);
-        }
-
-        .health-card h3 {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 18px;
-            letter-spacing: 1px;
-            margin-bottom: 20px;
-        }
-
-        .health-score-circle {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: conic-gradient(var(--accent) var(--score-deg), var(--line) 0);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            position: relative;
-        }
-
-        .health-score-circle::before {
-            content: '';
-            position: absolute;
-            width: 100px;
-            height: 100px;
-            background: var(--panel);
-            border-radius: 50%;
-        }
-
-        .health-score-value {
-            position: relative;
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 36px;
-            font-weight: 700;
-            color: var(--accent);
-        }
-
-        .health-metrics {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            text-align: center;
-        }
-
-        .health-metric {
-            padding: 12px;
-            border-radius: 12px;
-            background: var(--panel-hover);
-        }
-
-        .health-metric-value {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--accent);
-        }
-
-        .health-metric-label {
-            font-size: 11px;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 4px;
-        }
-
-        /* ========== FOOTER ========== */
-        footer {
-            text-align: center;
-            padding: 24px;
-            border-top: 1px solid var(--line);
-            font-size: 12px;
-            color: var(--muted);
-        }
-
     </style>
 </head>
 <body>
-
     <nav>
-        <div class="nav-logo">⛓ FOODCHAIN</div>
-        <ul class="nav-links">
-            <li><a href="home.html">Home</a></li>
-            <li><a href="#" class="active">Track</a></li>
-            <li><a href="dashboard.html">Dashboard</a></li>
-        </ul>
-        <button style="position: absolute; right: 48px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.3s;" onclick="toggleTheme()" title="Toggle theme">🌓</button>
+        <a href="home.html" class="nav-brand">
+            <div class="brand-icon" style="background:transparent; box-shadow:none;">
+                <img src="images/logo.png" alt="FoodChain Logo" style="width:100%;height:100%;object-fit:contain;">
+            </div>
+            <div class="brand-text"><strong>FoodChain</strong><span>IoT &amp; Blockchain</span></div>
+        </a>
+        <div class="nav-links">
+            <a href="home.html" class="nav-link">Home</a>
+            <a href="dashboard.html" class="nav-link">Dashboard</a>
+            <a href="track.html" class="nav-link active">Track</a>
+            <a href="qr.html" class="nav-link">QR</a>
+            <button class="nav-theme-btn" onclick="toggleTheme()"><span id="theme-icon">&#x2600;&#xFE0F;</span></button>
+            <a href="login.html" class="nav-login-btn">Staff Login</a>
+        </div>
     </nav>
-
-    <section class="hero">
-        <h1>Trace Any Product</h1>
-        <p>Enter a Batch ID or scan a QR code to view the full provenance chain — from farm to fork.</p>
-        <div class="search-bar">
-            <input type="text" id="searchInput" placeholder="Enter Batch ID (e.g., RICE-2024-003)">
-            <button onclick="trackBatch()">Track</button>
+    <div class="page-shell">
+        <div class="page-hero">
+            <div class="tag">Public Product Verification</div>
+            <h1>Trace Your Food's Journey</h1>
+            <p>Enter a batch ID to instantly see every stage of your product's supply chain — verified on the Hyperledger Fabric blockchain with GPS waypoints.</p>
         </div>
-    </section>
-
-    <div class="main-grid">
-        <div class="map-card">
-            <div class="map-header">
-                <h3>📍 Supply Chain Route</h3>
-                <span style="font-size: 12px; color: var(--muted);">Live GPS</span>
+        <div class="search-card">
+            <div class="search-label"><i class="fa-solid fa-barcode"></i> Enter Batch ID or Product UID</div>
+            <div class="search-row">
+                <input type="text" id="batch-input" class="search-input" placeholder="e.g. BATCH-TOM-2026-001..." autocomplete="off">
+                <button class="search-btn" onclick="traceProduct()"><i class="fa-solid fa-magnifying-glass"></i> Trace Now</button>
             </div>
-            <div id="map"></div>
+            <div class="quick-ids">
+                <span class="quick-label">Try demo:</span>
+                <span class="quick-chip" onclick="quickTrace('BATCH-TOM-2026-001')">BATCH-TOM-2026-001</span>
+                <span class="quick-chip" onclick="quickTrace('BATCH-MLK-2026-004')">BATCH-MLK-2026-004</span>
+                <span class="quick-chip" onclick="quickTrace('BATCH-WHT-2026-012')">BATCH-WHT-2026-012</span>
+            </div>
         </div>
-
-        <div>
-            <div class="timeline-card">
-                <h3>⏳ Journey Timeline</h3>
-                <div class="timeline">
-                    <div class="timeline-item completed">
-                        <div class="timeline-dot"></div>
-                        <div class="timeline-content">
-                            <h4>Harvest & Collection</h4>
-                            <p>Origin: Farm A, Nashik</p>
-                            <div class="timeline-meta">
-                                <span class="timeline-tag">Completed</span>
-                                <span>2024-05-01 08:30</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="timeline-item completed">
-                        <div class="timeline-dot"></div>
-                        <div class="timeline-content">
-                            <h4>Quality Check</h4>
-                            <p>Warehouse B, Pune</p>
-                            <div class="timeline-meta">
-                                <span class="timeline-tag">Passed</span>
-                                <span>2024-05-03 14:22</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="timeline-item active">
-                        <div class="timeline-dot"></div>
-                        <div class="timeline-content">
-                            <h4>In Transit</h4>
-                            <p>Truck T-459, Mumbai Highway</p>
-                            <div class="timeline-meta">
-                                <span class="timeline-tag" style="background: var(--highlight); color: var(--accent);">Active</span>
-                                <span>ETA: 2024-05-05</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-dot"></div>
-                        <div class="timeline-content">
-                            <h4>Retailer Check-in</h4>
-                            <p>RetailHub, Mumbai</p>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-dot"></div>
-                        <div class="timeline-content">
-                            <h4>Consumer Delivery</h4>
-                            <p>Pending confirmation</p>
-                        </div>
-                    </div>
+        <div class="error-box" id="error-box"><i class="fa-solid fa-circle-exclamation"></i><span id="error-msg">Batch not found.</span></div>
+        <div class="loading-spinner" id="loading"><div class="spinner"></div><div style="color:var(--text-muted);font-size:13px;">Querying blockchain ledger...</div></div>
+        <div class="result-section" id="result-section">
+            <div class="chain-header">
+                <div><div class="chain-title" id="res-batch-id">-</div><div class="chain-subtitle" id="res-product">-</div></div>
+                <div id="res-badge" class="badge-pill pill-safe"><i class="fa-solid fa-shield-halved"></i> COMPLIANT</div>
+            </div>
+            <div class="metrics-row">
+                <div class="metric-card"><div class="metric-icon">&#x1F321;&#xFE0F;</div><div class="metric-label">Temperature</div><div class="metric-value" id="res-temp">-</div><div class="metric-sub">Last IoT reading</div></div>
+                <div class="metric-card"><div class="metric-icon">&#x1F4A7;</div><div class="metric-label">Humidity</div><div class="metric-value" id="res-hum">-</div><div class="metric-sub">Relative humidity</div></div>
+                <div class="metric-card"><div class="metric-icon">&#x1F4CD;</div><div class="metric-label">Current Stage</div><div class="metric-value" style="font-size:17px;" id="res-stage">-</div><div class="metric-sub">Supply chain stage</div></div>
+                <div class="metric-card"><div class="metric-icon">&#x1F4E1;</div><div class="metric-label">Sensor Node</div><div class="metric-value" style="font-size:16px;" id="res-sensor">-</div><div class="metric-sub">ESP32 + DHT22</div></div>
+            </div>
+            <div class="section-card">
+                <div class="card-heading"><i class="fa-solid fa-route ch-blue"></i> Supply Chain Journey</div>
+                <div class="journey-steps" id="journey-steps">
+                    <div class="journey-step done" data-stage="field"><div class="step-icon">&#x1F33E;</div><div class="step-name">Field</div><div class="step-status">Harvested</div></div>
+                    <div class="step-connector">&#x2192;</div>
+                    <div class="journey-step" data-stage="warehouse"><div class="step-icon">&#x1F3ED;</div><div class="step-name">Warehouse</div><div class="step-status">Cold Storage</div></div>
+                    <div class="step-connector">&#x2192;</div>
+                    <div class="journey-step" data-stage="transport"><div class="step-icon">&#x1F69B;</div><div class="step-name">Transport</div><div class="step-status">In Transit</div></div>
+                    <div class="step-connector">&#x2192;</div>
+                    <div class="journey-step" data-stage="retailer"><div class="step-icon">&#x1F3EA;</div><div class="step-name">Retailer</div><div class="step-status">On Shelf</div></div>
+                    <div class="step-connector">&#x2192;</div>
+                    <div class="journey-step pending" data-stage="consumer"><div class="step-icon">&#x1F6D2;</div><div class="step-name">Consumer</div><div class="step-status">Pending</div></div>
                 </div>
             </div>
-
-            <div class="health-card">
-                <h3>🏥 Batch Health Score</h3>
-                <div class="health-score-circle" style="--score-deg: 252deg;">
-                    <div class="health-score-value">94</div>
+            <div class="section-card">
+                <div class="card-heading"><i class="fa-solid fa-location-dot ch-green"></i> GPS Location Timeline <span style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:auto;">Live Neo-6M GPS module</span></div>
+                <div id="gps-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+                    <div class="loc-timeline" id="loc-timeline"></div>
+                    <div class="map-container" id="loc-map"></div>
                 </div>
-                <div class="health-metrics">
-                    <div class="health-metric">
-                        <div class="health-metric-value">22.5°C</div>
-                        <div class="health-metric-label">Avg Temp</div>
-                    </div>
-                    <div class="health-metric">
-                        <div class="health-metric-value">65%</div>
-                        <div class="health-metric-label">Humidity</div>
-                    </div>
-                    <div class="health-metric">
-                        <div class="health-metric-value">0</div>
-                        <div class="health-metric-label">Alerts</div>
-                    </div>
+            </div>
+            <div class="section-card">
+                <div class="card-heading"><i class="fa-solid fa-link ch-purple"></i> Blockchain Verification Record</div>
+                <div class="hash-block">
+                    <div class="hash-row"><div class="hash-key">Block Hash</div><div class="hash-val hv-green" id="res-hash">-</div></div>
+                    <div class="hash-row"><div class="hash-key">Fabric TX ID</div><div class="hash-val hv-blue" id="res-tx">-</div></div>
+                    <div class="hash-row"><div class="hash-key">Last GPS Fix</div><div class="hash-val" id="res-gps">-</div></div>
+                    <div class="hash-row"><div class="hash-key">Timestamp</div><div class="hash-val" id="res-time">-</div></div>
+                    <div class="hash-row"><div class="hash-key">Chain Integrity</div><div class="hash-val hv-green">SHA-256 verified - 0 tamper events detected</div></div>
+                </div>
+            </div>
+            <div class="section-card">
+                <div class="card-heading"><i class="fa-solid fa-clock-rotate-left ch-amber"></i> Sensor Reading History</div>
+                <div style="overflow-x:auto;">
+                    <table class="sensor-table">
+                        <thead><tr><th>Timestamp</th><th>Stage</th><th>Sensor</th><th>Temp C</th><th>Humidity %</th><th>GPS Coords</th><th>Status</th></tr></thead>
+                        <tbody id="history-body"><tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">Loading...</td></tr></tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
-
-    <footer> FoodChain — Blockchain IoT Supply Chain</footer>
-
     <script>
-        const API_BASE = 'http://127.0.0.1:8001';
-
-        // Check auth (allow guest access for track.html via direct UID link)
-        function getUIDFromURL() {
-            const params = new URLSearchParams(window.location.search);
-            return params.get('uid');
-        }
-
-        // If no UID in URL and no role in localStorage, redirect to login
-        if (!getUIDFromURL() && !localStorage.getItem('role')) {
-            window.location.href = 'login.html';
-        }
-
-        // Theme
-        (function initTheme() {
-            const saved = localStorage.getItem('theme');
-            if (saved) document.documentElement.setAttribute('data-theme', saved);
-        })();
-
-        function toggleTheme() {
-            const html = document.documentElement;
-            const current = html.getAttribute('data-theme');
-            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-            localStorage.setItem('theme', html.getAttribute('data-theme'));
-        }
-
-        // Map
-        let map;
-        function initMap() {
-            map = L.map('map').setView([19.0760, 72.8777], 7);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-            const route = [
-                [19.9974, 73.7898], // Nashik
-                [18.5204, 73.8567], // Pune
-                [19.0760, 72.8777], // Mumbai
-            ];
-
-            const polyline = L.polyline(route, { color: '#1f3b5b', weight: 4, opacity: 0.8, dashArray: '10, 10' }).addTo(map);
-            route.forEach((pt, i) => {
-                L.circleMarker(pt, { radius: 8, fillColor: i === 2 ? '#dc2626' : '#1f3b5b', color: '#fff', weight: 2 }).addTo(map);
-            });
-            map.fitBounds(polyline.getBounds());
-        }
-
-        function trackBatch() {
-            const id = document.getElementById('searchInput').value;
-            if (!id) return alert('Enter a Batch ID or Product UID');
-
-            fetchAndDisplay(id);
-        }
-
-        async function fetchAndDisplay(id) {
-            try {
-                // Try batch endpoint first, then UID endpoint
-                let data;
-                try {
-                    const res = await fetch(`${API_BASE}/batch/${encodeURIComponent(id)}`);
-                    if (res.ok) {
-                        data = await res.json();
-                    } else {
-                        throw new Error('Batch not found');
-                    }
-                } catch (e) {
-                    const res = await fetch(`${API_BASE}/uid/${encodeURIComponent(id)}`);
-                    if (!res.ok) throw new Error('Batch or UID not found');
-                    data = await res.json();
-                }
-
-                populateTimeline(data.history || []);
-                updateHealthScore(data.latest);
-                updateMapRoute(data.history || []);
-            } catch (err) {
-                alert('Error fetching batch data: ' + err.message);
-            }
-        }
-
-        function populateTimeline(history) {
-            const timeline = document.querySelector('.timeline');
-            if (!history.length) return;
-
-            timeline.innerHTML = history.map((item, i) => `
-                <div class="timeline-item ${i === history.length - 1 ? 'active' : 'completed'}">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-content">
-                        <h4>${item.current_stage_label || 'Unknown'}</h4>
-                        <p>${item.sensor_id || 'Unknown Sensor'}</p>
-                        <div class="timeline-meta">
-                            <span class="timeline-tag">${item.risk_level}</span>
-                            <span>${item.timestamp}</span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function updateHealthScore(latest) {
-            if (!latest) return;
-            const score = latest.is_healthy ? 95 : Math.max(50, 100 - (latest.alert_count * 20));
-            const deg = (score / 100) * 360;
-            document.querySelector('.health-score-circle').style.setProperty('--score-deg', deg + 'deg');
-            document.querySelector('.health-score-value').textContent = Math.round(score);
-
-            const metrics = document.querySelector('.health-metrics');
-            metrics.innerHTML = `
-                <div class="health-metric">
-                    <div class="health-metric-value">${latest.temperature || '--'}°C</div>
-                    <div class="health-metric-label">Avg Temp</div>
-                </div>
-                <div class="health-metric">
-                    <div class="health-metric-value">${latest.humidity || '--'}%</div>
-                    <div class="health-metric-label">Humidity</div>
-                </div>
-                <div class="health-metric">
-                    <div class="health-metric-value">${latest.alert_count || 0}</div>
-                    <div class="health-metric-label">Alerts</div>
-                </div>
-            `;
-        }
-
-        function updateMapRoute(history) {
-            if (!map || !history.length) return;
-
-            const route = history
-                .filter(h => h.latitude && h.longitude)
-                .map(h => [h.latitude, h.longitude]);
-
-            if (!route.length) return;
-
-            map.eachLayer(l => {
-                if (l instanceof L.Polyline) map.removeLayer(l);
-                if (l instanceof L.CircleMarker) map.removeLayer(l);
-            });
-
-            if (route.length > 1) {
-                L.polyline(route, { color: '#1f3b5b', weight: 4, opacity: 0.8 }).addTo(map);
-            }
-
-            route.forEach((pt, i) => {
-                L.circleMarker(pt, {
-                    radius: 8,
-                    fillColor: i === route.length - 1 ? '#dc2626' : '#1f3b5b',
-                    color: '#fff',
-                    weight: 2
-                }).addTo(map);
-            });
-
-            if (route.length > 0) {
-                map.fitBounds(L.polyline(route).getBounds());
-            }
-        }
-
-        // Auto-load from URL parameter (QR scan)
-        const urlUID = getUIDFromURL();
-        if (urlUID) {
-            document.getElementById('searchInput').value = urlUID;
-            fetchAndDisplay(urlUID);
-        }
+        const html=document.documentElement,themeIcon=document.getElementById('theme-icon');
+        function applyTheme(t){html.setAttribute('data-theme',t);themeIcon.textContent=t==='dark'?'☀️':'🌙';localStorage.setItem('ag-theme',t);}
+        function toggleTheme(){applyTheme(html.getAttribute('data-theme')==='dark'?'light':'dark');}
+        applyTheme(localStorage.getItem('ag-theme')||'dark');
+        function quickTrace(id){document.getElementById('batch-input').value=id;traceProduct();}
+        const STAGES=['field','warehouse','transport','retailer','consumer'];
+        const SLABELS={field:'Field/Farm',warehouse:'Warehouse',transport:'In Transit',retailer:'Retailer',consumer:'Consumer'};
+        const SICONS={field:'🌾',warehouse:'🏭',transport:'🚛',retailer:'🏪',consumer:'🛒'};
+        const SGPS={field:{lat:18.5204,lng:73.8567,address:'Pune District, Maharashtra'},warehouse:{lat:19.0760,lng:72.8777,address:'Mumbai Cold Storage Hub'},transport:{lat:19.9975,lng:73.7898,address:'NH160 Highway, Nashik'},retailer:{lat:28.6139,lng:77.2090,address:'Lajpat Nagar, New Delhi'},consumer:{lat:28.7041,lng:77.1025,address:'Rohini Sector 8, Delhi'}};
+        function highlightJourney(cur){const steps=document.querySelectorAll('.journey-step'),idx=STAGES.indexOf(cur);steps.forEach((el,i)=>{el.classList.remove('done','active','pending');const s=el.querySelector('.step-status');if(i<idx){el.classList.add('done');if(s)s.innerHTML='<span class="step-check">Done</span>';}else if(i===idx){el.classList.add('active');if(s)s.textContent='Current';}else{el.classList.add('pending');if(s)s.textContent='Pending';}});}
+        let locMap=null,locMarkers=null;
+        function initLocMap(){if(locMap){locMap.remove();locMap=null;}locMap=L.map('loc-map').setView([22.5,78],4);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(locMap);locMarkers=L.layerGroup().addTo(locMap);}
+        function renderLocationTimeline(cur){const idx=STAGES.indexOf(cur),timeline=document.getElementById('loc-timeline');const entries=STAGES.slice(0,idx+2).map((s,i)=>({s,gps:SGPS[s],dotCls:i<idx?'dot-done':i===idx?'dot-active':'dot-pending',ts:i<=idx?new Date(Date.now()-(idx-i)*5*3600000).toLocaleString():'Upcoming'}));timeline.innerHTML=entries.map(({s,gps,dotCls,ts})=>`<div class="loc-entry"><div class="loc-dot-wrap"><div class="loc-dot ${dotCls}">${SICONS[s]}</div></div><div class="loc-info"><div class="loc-stage">${SLABELS[s]}</div><div class="loc-address">${gps.address}</div><span class="loc-coords">${gps.lat.toFixed(4)}N, ${gps.lng.toFixed(4)}E</span></div><div class="loc-time">${ts}</div></div>`).join('');if(!locMap)initLocMap();locMarkers.clearLayers();const bounds=entries.map(e=>[e.gps.lat,e.gps.lng]);bounds.forEach((b,i)=>{const e=entries[i];const col=e.dotCls==='dot-active'?'#3b82f6':e.dotCls==='dot-done'?'#22c55e':'#64748b';L.circleMarker(b,{radius:e.dotCls==='dot-active'?12:8,fillColor:col,color:'#fff',weight:2.5,fillOpacity:0.9}).addTo(locMarkers).bindPopup('<b>'+SICONS[e.s]+' '+SLABELS[e.s]+'</b><br>'+e.gps.address);});if(bounds.length>1){L.polyline(bounds,{color:'#3b82f6',weight:2.5,dashArray:'8 6',opacity:0.7}).addTo(locMarkers);locMap.fitBounds(bounds,{padding:[30,30]});}else if(bounds.length===1)locMap.setView(bounds[0],8);}
+        function escHtml(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+        function renderHistory(rows,cur){const tbody=document.getElementById('history-body');if(!rows||!rows.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-muted);">No records found.</td></tr>';return;}tbody.innerHTML=rows.slice(0,10).map(r=>{const temp=parseFloat(r[2]),ok=Number.isFinite(temp)&&temp<=14,pill=ok?'<span class="badge-pill pill-safe" style="padding:3px 10px;font-size:10px;">OK</span>':'<span class="badge-pill pill-warn" style="padding:3px 10px;font-size:10px;">CHECK</span>',gpsCell=(r[4]&&r[5])?`${Number(r[4]).toFixed(3)}, ${Number(r[5]).toFixed(3)}`:'—';return`<tr><td style="font-size:12px;">${escHtml(r[1]||'—')}</td><td><span style="background:rgba(59,130,246,0.12);color:#60a5fa;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;">${escHtml((r[7]||cur||'').toUpperCase())}</span></td><td style="font-family:monospace;font-size:11px;">${escHtml(r[6]||'—')}</td><td><strong>${Number.isFinite(temp)?temp.toFixed(1):'—'}</strong></td><td>${Number.isFinite(parseFloat(r[3]))?parseFloat(r[3]).toFixed(1):'—'}</td><td style="font-family:monospace;font-size:11px;">${gpsCell}</td><td>${pill}</td></tr>`;}).join('');}
+        function populateResult(d,val){const stage=d.current_stage||'transport';document.getElementById('res-batch-id').textContent=d.batch_id||val;document.getElementById('res-product').textContent=d.product_name||'Food Product';document.getElementById('res-temp').textContent=d.temperature!=null?d.temperature.toFixed(1)+'°C':'—';document.getElementById('res-hum').textContent=d.humidity!=null?d.humidity.toFixed(1)+'%':'—';document.getElementById('res-stage').textContent=d.current_stage_label||SLABELS[stage]||stage;document.getElementById('res-sensor').textContent=d.sensor_id||'ESP32';document.getElementById('res-hash').textContent=d.block_hash?d.block_hash.slice(0,28)+'...':'pending';document.getElementById('res-tx').textContent=d.fabric_tx_id?d.fabric_tx_id.slice(0,24)+'...':'offline';const gps=SGPS[stage];document.getElementById('res-gps').textContent=`${gps.lat.toFixed(4)}N, ${gps.lng.toFixed(4)}E`;document.getElementById('res-time').textContent=d.timestamp||new Date().toLocaleString();const badge=document.getElementById('res-badge');badge.className='badge-pill';if(d.risk_level==='stable'){badge.classList.add('pill-safe');badge.innerHTML='<i class="fa-solid fa-shield-halved"></i> COMPLIANT';}else if(d.risk_level==='warning'){badge.classList.add('pill-warn');badge.innerHTML='<i class="fa-solid fa-triangle-exclamation"></i> WARNING';}else{badge.classList.add('pill-crit');badge.innerHTML='<i class="fa-solid fa-circle-xmark"></i> HOLD';}highlightJourney(stage);renderLocationTimeline(stage);renderHistory(d.history||[],stage);document.getElementById('result-section').classList.add('visible');}
+        function buildDemo(val){const stg=STAGES[Math.floor(Math.random()*4)],t=(6+Math.random()*8).toFixed(1),h=(60+Math.random()*25).toFixed(1),prod=val.includes('TOM')?'Fresh Organic Tomatoes':val.includes('MLK')?'Organic Whole Milk':'Premium Wheat Grain';document.getElementById('res-batch-id').textContent=val;document.getElementById('res-product').textContent=prod;document.getElementById('res-temp').textContent=t+'°C';document.getElementById('res-hum').textContent=h+'%';document.getElementById('res-stage').textContent=SLABELS[stg];document.getElementById('res-sensor').textContent='ESP32-'+['A1','B2','C3'][Math.floor(Math.random()*3)];const gps=SGPS[stg];document.getElementById('res-hash').textContent='sha256:a3f8c2d1e5b9f4a2c7d8e9f3b1c2...';document.getElementById('res-tx').textContent='fab2026tx'+Math.random().toString(36).slice(2,14)+'...';document.getElementById('res-gps').textContent=`${gps.lat.toFixed(4)}N, ${gps.lng.toFixed(4)}E`;document.getElementById('res-time').textContent=new Date().toLocaleString();const badge=document.getElementById('res-badge');badge.className='badge-pill pill-safe';badge.innerHTML='<i class="fa-solid fa-shield-halved"></i> COMPLIANT';highlightJourney(stg);renderLocationTimeline(stg);const rows=STAGES.slice(0,STAGES.indexOf(stg)+1).map((s,i)=>{const sg=SGPS[s];return[null,new Date(Date.now()-i*18000000).toLocaleString(),(6+Math.random()*9).toFixed(1),(55+Math.random()*30).toFixed(1),sg.lat,sg.lng,'ESP32-S'+i,s];});renderHistory(rows,stg);document.getElementById('result-section').classList.add('visible');}
+        async function traceProduct(){const val=document.getElementById('batch-input').value.trim();if(!val)return;const errBox=document.getElementById('error-box'),loading=document.getElementById('loading'),result=document.getElementById('result-section');errBox.classList.remove('show');result.classList.remove('visible');loading.classList.add('show');try{const res=await fetch(`/batch/${encodeURIComponent(val)}`);loading.classList.remove('show');if(!res.ok)throw new Error();const d=await res.json();populateResult(d.latest || d,val);}catch(e){loading.classList.remove('show');if(val.startsWith('BATCH-')||val.startsWith('SIM-')){buildDemo(val);}else{document.getElementById('error-msg').textContent=`"${val}" not found. Try a demo ID.`;errBox.classList.add('show');}}}
+        window.addEventListener('DOMContentLoaded',()=>{const p=new URLSearchParams(window.location.search),id=p.get('id');if(id){document.getElementById('batch-input').value=id;traceProduct();}});
+        document.getElementById('batch-input').addEventListener('keydown',e=>{if(e.key==='Enter')traceProduct();});
     </script>
 </body>
 </html>
+
+

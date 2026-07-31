@@ -1,5 +1,11 @@
 .venv/
 __pycache__/
 *.db
+*.db-shm
+*.db-wal
 blockchain/fabric-samples/
+blockchain/node_modules/
+blockchain/temp_ctor.json
+blockchain/temp_payload.json
 *.zip
+query

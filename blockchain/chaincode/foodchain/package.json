@@ -1,1 +1,16 @@
-{ "name": "foodchain", "version": "1.0.0", "main": "foodchain.js", "scripts": { "start": "node foodchain.js" }, "dependencies": { "fabric-contract-api": "^2.5.5", "fabric-shim": "^2.5.5" } }
+{
+    "name": "foodchain",
+    "version": "2.0.0",
+    "description": "FoodChain Supply Chain Smart Contract for Hyperledger Fabric",
+    "main": "foodchain.js",
+    "scripts": {
+        "start": "fabric-chaincode-node start",
+        "test": "echo \"No tests yet\""
+    },
+    "dependencies": {
+        "fabric-contract-api": "^2.5.5",
+        "fabric-shim": "^2.5.5"
+    },
+    "author": "FoodChain Team",
+    "license": "Apache-2.0"
+}

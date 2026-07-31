@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodChain — Product Tracking</title>
+    <meta name="description" content="Track your food product through the blockchain-secured supply chain. Real-time IoT data from farm to fork.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-card: #141414;
+            --bg-elevated: #1a1a1a;
+            --gold: #D4AF37;
+            --gold-dark: #B8960C;
+            --gold-light: #E8C84A;
+            --gold-glow: rgba(212, 175, 55, 0.15);
+            --gold-border: rgba(212, 175, 55, 0.3);
+            --text-primary: #ffffff;
+            --text-secondary: #aaaaaa;
+            --text-muted: #555555;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --line: rgba(212, 175, 55, 0.12);
+            --muted: #a89d80;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            background:
+                radial-gradient(ellipse 70% 50% at 5% 60%, rgba(212,175,55,0.08) 0%, transparent 50%),
+                var(--bg-primary);
+        }
+
+        /* Background grid */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(212,175,55,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(212,175,55,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ===== SHELL ===== */
+        .shell {
+            position: relative;
+            z-index: 1;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+
+        /* ===== BREADCRUMB / NAV ===== */
+        .page-nav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .page-nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 12px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            transition: color 0.3s;
+        }
+
+        .page-nav a:hover { color: var(--gold); }
+
+        .page-nav .sep {
+            color: rgba(212,175,55,0.3);
+            font-size: 12px;
+        }
+
+        .page-nav .current {
+            color: var(--gold);
+            font-size: 12px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* ===== HERO SECTION ===== */
+        .hero {
+            border-radius: 24px;
+            border: 1px solid var(--line);
+            background: rgba(14, 10, 0, 0.85);
+            backdrop-filter: blur(16px);
+            padding: 36px 36px 32px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(212,175,55,0.2);
+            background: rgba(212,175,55,0.06);
+            color: rgba(212,175,55,0.8);
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 18px;
+        }
+
+        .hero h1 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 48px;
+            letter-spacing: 2px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .hero h1 span { color: var(--gold); text-shadow: 0 0 40px rgba(212,175,55,0.4); }
+
+        .hero p {
+            max-width: 720px;
+            color: var(--muted);
+            line-height: 1.75;
+            font-size: 14px;
+        }
+
+        /* ===== SEARCH CARD ===== */
+        .search-card {
+            margin-bottom: 20px;
+            padding: 22px 24px;
+            border-radius: 20px;
+            border: 1px solid var(--line);
+            background: rgba(14, 10, 0, 0.85);
+            backdrop-filter: blur(12px);
+        }
+
+        .search-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .search-row input {
+            flex: 1;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(212,175,55,0.15);
+            background: rgba(255,255,255,0.03);
+            color: var(--text-primary);
+            outline: none;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .search-row input::placeholder { color: rgba(255,255,255,0.2); }
+
+        .search-row input:focus {
+            border-color: rgba(212,175,55,0.5);
+            background: rgba(212,175,55,0.03);
+            box-shadow: 0 0 0 3px rgba(212,175,55,0.08);
+        }
+
+        .search-row button {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+            color: #000;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .search-row button:hover {
+            box-shadow: 0 6px 24px rgba(212,175,55,0.4);
+            transform: translateY(-2px);
+        }
+
+        /* ===== TRACK CARD ===== */
+        .track-card {
+            display: none;
+            border-radius: 24px;
+            border: 1px solid var(--line);
+            background: rgba(14, 10, 0, 0.85);
+            backdrop-filter: blur(12px);
+            padding: 32px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .track-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold) 40%, transparent);
+        }
+
+        .track-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 24px;
+            align-items: flex-start;
+        }
+
+        .track-title h2 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 36px;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+        }
+
+        .track-title p {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 13px;
+            font-family: 'JetBrains Mono', monospace;
+            color: rgba(212,175,55,0.6);
+        }
+
+        .verified-badge,
+        .status-pill,
+        .alert-chip,
+        .healthy-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 16px;
+            border-radius: 999px;
+            font-size: 12px;
+            line-height: 1.4;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .verified-badge {
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            background: rgba(34, 197, 94, 0.08);
+            color: var(--success);
+            height: fit-content;
+        }
+
+        .status-pill {
+            color: var(--gold);
+            background: rgba(212,175,55,0.1);
+            border: 1px solid rgba(212,175,55,0.25);
+        }
+
+        .alert-chip {
+            color: #ffd5c6;
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.2);
+        }
+
+        .healthy-chip {
+            color: var(--success);
+            background: rgba(34,197,94,0.08);
+            border: 1px solid rgba(34,197,94,0.2);
+        }
+
+        /* ===== PROGRESS ===== */
+        .progress-wrap {
+            margin-bottom: 20px;
+            padding: 18px 20px;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.02);
+        }
+
+        .progress-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+            color: var(--text-muted);
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .progress-head #progress-value {
+            color: var(--gold);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 16px;
+        }
+
+        .progress-track {
+            height: 8px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(255,255,255,0.06);
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-light));
+            transition: width 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border-radius: 999px;
+            box-shadow: 0 0 12px rgba(212,175,55,0.4);
+        }
+
+        /* Stage indicators */
+        .stage-dots {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .stage-dot {
+            font-size: 9px;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            text-align: center;
+            flex: 1;
+        }
+
+        /* ===== HEALTH BANNER ===== */
+        .health-banner {
+            margin-bottom: 20px;
+            padding: 18px 20px;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.02);
+        }
+
+        .health-banner strong {
+            display: block;
+            margin-bottom: 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 18px;
+            letter-spacing: 1px;
+            color: var(--text-primary);
+        }
+
+        .health-banner p {
+            color: var(--muted);
+            line-height: 1.65;
+            font-size: 13px;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        /* ===== STATS GRID ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+        }
+
+        .stat-card {
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.02);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(212,175,55,0.3), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: rgba(212,175,55,0.2);
+            background: rgba(212,175,55,0.03);
+            transform: translateY(-2px);
+        }
+
+        .stat-card:hover::before { opacity: 1; }
+
+        .stat-card label {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .stat-card span {
+            display: block;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 22px;
+            color: rgba(241, 224, 167, 0.9);
+            line-height: 1.3;
+        }
+
+        /* Hash values get monospace */
+        .stat-card .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--gold);
+            word-break: break-all;
+        }
+
+        /* ===== EMPTY CARD ===== */
+        .empty-card {
+            border-radius: 24px;
+            border: 1px solid var(--line);
+            background: rgba(14, 10, 0, 0.85);
+            backdrop-filter: blur(12px);
+            padding: 60px 28px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 56px;
+            margin-bottom: 20px;
+            filter: grayscale(0.3);
+        }
+
+        .empty-card h3 {
+            margin-bottom: 12px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 28px;
+            color: var(--gold);
+            letter-spacing: 1px;
+        }
+
+        .empty-card p {
+            color: var(--text-muted);
+            line-height: 1.75;
+            font-size: 14px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 780px) {
+            .track-top, .search-row, .progress-head { flex-direction: column; align-items: stretch; }
+            .hero h1 { font-size: 36px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <!-- Breadcrumb nav -->
+        <div class="page-nav">
+            <a href="home.html">⛓️ Home</a>
+            <span class="sep">›</span>
+            <a href="dashboard.html">Dashboard</a>
+            <span class="sep">›</span>
+            <span class="current">Product Tracking</span>
+        </div>
+
+        <section class="hero">
+            <div class="hero-badge">🔍 Public Product Tracking</div>
+            <h1>TRACK YOUR <span>PRODUCT</span></h1>
+            <p>Enter a unique product ID or scan the QR code to view the latest consumer-friendly traceability summary. This page shows the exact product item, its batch, current stage, and live health status.</p>
+        </section>
+
+        <section class="search-card">
+            <div class="search-label">Search by Product ID</div>
+            <div class="search-row">
+                <input id="product-uid-input" type="text" placeholder="Enter Unique Product ID from the QR code" list="uid-options">
+                <datalist id="uid-options"></datalist>
+                <button onclick="searchProduct()">🔍 Track Product</button>
+            </div>
+        </section>
+
+        <section class="track-card" id="track-card">
+            <div class="track-top">
+                <div class="track-title">
+                    <h2 id="product-name">Product</h2>
+                    <p id="uid-label">Unique Product ID</p>
+                </div>
+                <div class="verified-badge">✓ Blockchain Verified</div>
+            </div>
+
+            <div class="progress-wrap">
+                <div class="progress-head">
+                    <span id="progress-label">Journey progress</span>
+                    <span id="progress-value">0%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="stage-dots">
+                    <span class="stage-dot">Field</span>
+                    <span class="stage-dot">Warehouse</span>
+                    <span class="stage-dot">Transport</span>
+                    <span class="stage-dot">Retailer</span>
+                    <span class="stage-dot">Consumer</span>
+                </div>
+            </div>
+
+            <div class="health-banner">
+                <strong id="health-heading">Edge health</strong>
+                <p id="health-message">Waiting for the latest condition summary.</p>
+                <div class="chip-row" id="health-chips"></div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <label>Unique Product ID</label>
+                    <span id="product-uid-value">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Batch ID</label>
+                    <span id="batch-id-value">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Current Stage</label>
+                    <span id="current-stage">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Current Location</label>
+                    <span id="current-location">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Temperature</label>
+                    <span id="temperature">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Humidity</label>
+                    <span id="humidity">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Sensor ID</label>
+                    <span id="sensor-id">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Health Status</label>
+                    <span id="health-status">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Expected Temp Range</label>
+                    <span id="expected-temp">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Expected Humidity Range</label>
+                    <span id="expected-humidity">--</span>
+                </div>
+                <div class="stat-card">
+                    <label>Last Updated</label>
+                    <span id="updated-at">--</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="empty-card" id="empty-card">
+            <div class="empty-icon">🔍</div>
+            <h3 id="empty-title">Find a Product</h3>
+            <p id="empty-message">Use a unique product ID to open the latest consumer-friendly tracking summary.</p>
+        </section>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8001';
+        const STAGES = ['field', 'warehouse', 'transport', 'retailer', 'consumer'];
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function setProgress(stage, label) {
+            const stageIndex = Math.max(STAGES.indexOf(stage), 0);
+            const pct = Math.round(((stageIndex + 1) / STAGES.length) * 100);
+            document.getElementById('progress-fill').style.width = `${pct}%`;
+            document.getElementById('progress-value').textContent = `${pct}%`;
+            document.getElementById('progress-label').textContent = label || `${stageIndex + 1} of ${STAGES.length} stages completed`;
+        }
+
+        function showEmpty(title, message) {
+            document.getElementById('track-card').style.display = 'none';
+            document.getElementById('empty-card').style.display = 'block';
+            document.getElementById('empty-title').textContent = title;
+            document.getElementById('empty-message').textContent = message;
+        }
+
+        function renderHealth(record) {
+            document.getElementById('health-heading').textContent = `Edge health: ${record.health_label}`;
+            document.getElementById('health-message').textContent = record.edge_decision || 'No edge decision available.';
+            const chipRow = document.getElementById('health-chips');
+
+            if (record.alerts && record.alerts.length) {
+                chipRow.innerHTML = record.alerts.map((alert) => `<span class="alert-chip">⚠️ ${escapeHtml(alert)}</span>`).join('');
+                return;
+            }
+
+            chipRow.innerHTML = '<span class="healthy-chip">✓ Product readings are within the expected stage range.</span>';
+        }
+
+        function showTrackCard(record) {
+            document.getElementById('track-card').style.display = 'block';
+            document.getElementById('empty-card').style.display = 'none';
+
+            document.getElementById('product-name').textContent = record.product || record.product_name || `UID ${record.product_uid}`;
+            document.getElementById('uid-label').textContent = `Unique Product ID - ${record.product_uid}`;
+            document.getElementById('product-uid-value').textContent = record.product_uid || '--';
+            document.getElementById('batch-id-value').textContent = record.batch_id || '--';
+            document.getElementById('current-stage').innerHTML = `<span class="status-pill">${escapeHtml(record.current_stage_label || record.current_stage || '--')}</span>`;
+            document.getElementById('current-location').textContent = record.latitude !== null && record.longitude !== null
+                ? `${record.latitude}, ${record.longitude}`
+                : '--';
+            document.getElementById('temperature').textContent = record.temperature !== null && record.temperature !== undefined ? `${record.temperature}°C` : '--';
+            document.getElementById('humidity').textContent = record.humidity !== null && record.humidity !== undefined ? `${record.humidity}%` : '--';
+            document.getElementById('sensor-id').textContent = record.sensor_id || '--';
+            document.getElementById('health-status').textContent = record.health_label || record.risk_level || '--';
+            document.getElementById('expected-temp').textContent = record.expected_temperature_range || '--';
+            document.getElementById('expected-humidity').textContent = record.expected_humidity_range || '--';
+            document.getElementById('updated-at').textContent = record.timestamp || '--';
+
+            renderHealth(record);
+            setProgress(record.current_stage, record.journey_progress_label);
+        }
+
+        async function loadUidSuggestions() {
+            try {
+                const res = await fetch(`${API_BASE}/uids`);
+                const json = await res.json();
+                const options = document.getElementById('uid-options');
+                options.innerHTML = (json.uids || [])
+                    .map((item) => `<option value="${escapeHtml(item.product_uid)}">${escapeHtml(item.product)}</option>`)
+                    .join('');
+            } catch (error) {
+                // Keep page usable even if suggestions fail.
+            }
+        }
+
+        async function loadProduct(productUid, fallbackBatchId = '') {
+            if (!productUid && !fallbackBatchId) {
+                showEmpty('Find a Product', 'Use a unique product ID to open the latest consumer-friendly tracking summary.');
+                return;
+            }
+
+            if (productUid) {
+                document.getElementById('product-uid-input').value = productUid;
+            }
+
+            try {
+                let res;
+                if (productUid) {
+                    res = await fetch(`${API_BASE}/uid/${encodeURIComponent(productUid)}/current`);
+                }
+
+                if ((!res || !res.ok) && fallbackBatchId) {
+                    res = await fetch(`${API_BASE}/batch/${encodeURIComponent(fallbackBatchId)}/current`);
+                }
+
+                if (!res || !res.ok) {
+                    const target = productUid || fallbackBatchId;
+                    showEmpty('No data available', `No data available for ${target}.`);
+                    return;
+                }
+
+                const record = await res.json();
+                showTrackCard(record);
+            } catch (error) {
+                showEmpty('Tracking unavailable', 'Unable to reach the backend service right now.');
+            }
+        }
+
+        function searchProduct() {
+            const productUid = document.getElementById('product-uid-input').value.trim();
+            const nextUrl = `${window.location.pathname}?uid=${encodeURIComponent(productUid)}`;
+            window.history.replaceState({}, '', nextUrl);
+            loadProduct(productUid);
+        }
+
+        loadUidSuggestions();
+        const params = new URLSearchParams(window.location.search);
+        loadProduct(params.get('uid') || '', params.get('id') || '');
+    </script>
+</body>
+</html>

@@ -1,3 +1,4 @@
+import argparse
 import hashlib
 import json
 import random
@@ -131,11 +132,15 @@ def publish_batch(client, batch):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="FoodChain IoT Sensor Simulator")
+    parser.add_argument("--mode", choices=["demo", "normal"], default="demo", help="Simulation mode (default: demo)")
+    args = parser.parse_args()
+
     client = mqtt.Client()
     client.connect(BROKER, PORT, 60)
     client.loop_start()
 
-    print("Food supply chain sensor simulation started...")
+    print(f"=== FoodChain IoT Sensor Simulator Started (Mode: {args.mode.upper()}) ===")
     print(f"Stable UIDs: {[b['product_uid'] for b in BATCHES]}")
 
     try:
