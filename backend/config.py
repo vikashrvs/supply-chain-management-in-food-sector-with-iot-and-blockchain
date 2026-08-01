@@ -84,6 +84,8 @@ RECORD_SELECT = f"""
         sd.product_id,
         sd.status,
         sd.block_hash,
+        sd.fabric_tx_id,
+        sd.field_hash,
         {BATCH_KEY_EXPR} AS batch_id,
         {UID_KEY_EXPR} AS product_uid,
         {PRODUCT_EXPR} AS product,

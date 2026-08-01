@@ -49,6 +49,22 @@ graph TD
 | **Database** | SQLite3 (configured with WAL mode) | Off-chain structured data storage and indexing |
 | **Blockchain** | Hyperledger Fabric (WSL2 Ubuntu) + SHA-256 | Immutable distributed ledger and smart contracts (`foodchain`) |
 | **Frontend** | Vanilla JS, HTML5, CSS Variables, Leaflet.js, Chart.js | Interactive charts, live mapping, and QR camera scanner |
+| **AI Agents** | CrewAI, LangChain, Ollama (Llama 3) | Autonomous multi-agent shipment analysis and anomaly detection |
+
+---
+
+---
+
+## 🤖 AI Multi-Agent System (CrewAI)
+
+FoodChain includes an autonomous, local multi-agent system powered by **CrewAI** and **Ollama**. When anomalies are detected, a specialized team of AI agents analyzes the incident:
+
+1. **Orion (Supply Chain Orchestrator):** Supervises the workflow and compiles the final incident report.
+2. **Data-Tron (Database Records Specialist):** Retrieves raw sensor readings and shipment metadata.
+3. **Aero (IoT Safety Analyst):** Evaluates sensor telemetry for safety threshold breaches (e.g., temperature spikes).
+4. **Ledger-Guard (Blockchain Verifier):** Audits Hyperledger Fabric to ensure data integrity hasn't been compromised.
+
+You can trigger a full agent analysis for any shipment by sending a `POST` request to `/api/agents/analyze` with the `batch_id`.
 
 ---
 
@@ -83,7 +99,16 @@ food_chain/
 │   ├── auth.py               # JWT authentication logic & route guards
 │   ├── schemas.py            # Pydantic input/output schemas
 │   ├── mqtt_handler.py       # MQTT connection & message routing
+│   ├── agents/               # CrewAI Multi-Agent System
+│   │   ├── crew.py           # Orchestrator & Task definitions
+│   │   ├── orchestrator.py   # Orion - Supply Chain Supervisor
+│   │   ├── iot_analyst.py    # Aero - IoT Safety Analyst
+│   │   ├── database_checker.py # Data-Tron - Database Specialist
+│   │   ├── blockchain_verifier.py # Ledger-Guard - Blockchain Auditor
+│   │   ├── tools.py          # Tools for SQLite & Fabric lookups
+│   │   └── llm.py            # Local Ollama connection setup
 │   ├── routes/               # API Router endpoints
+│   │   ├── agents.py         # CrewAI trigger endpoint (/api/agents/analyze)
 │   │   ├── sensor.py         # Telemetry, batches, alerts, and uids
 │   │   ├── tracking.py       # Detailed batch & UID history tracking
 │   │   └── blockchain.py     # Hash chain verification & Fabric status

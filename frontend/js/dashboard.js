@@ -16,11 +16,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initDate() {
-  const dateEl = document.getElementById('current-date');
-  if (dateEl) {
-    const options = { day: 'numeric', month: 'long', year: 'numeric' };
-    dateEl.textContent = new Date().toLocaleDateString('en-GB', options);
+  function updateDate() {
+    const dateEl = document.getElementById('current-date');
+    if (dateEl) {
+      const now = new Date();
+      const options = { day: 'numeric', month: 'long', year: 'numeric' };
+      dateEl.textContent = now.toLocaleDateString('en-GB', options);
+    }
   }
+  updateDate();
+  // Refresh date every minute in case user leaves tab open overnight
+  setInterval(updateDate, 60000);
 }
 
 function initUserProfile() {
@@ -66,56 +72,69 @@ function initLeafletMap() {
   const theme = document.documentElement.getAttribute('data-theme') || 'light';
   updateMapTileTheme(theme);
 
-  // Sample Waypoints: Farm -> Processing -> Transport -> Distribution -> Delivery
-  const waypoints = [
-    { coords: [18.5204, 73.8567], title: 'Farm (Harvested)', status: 'completed', icon: '🌾' },
-    { coords: [18.7387, 73.6765], title: 'Processing (Completed)', status: 'completed', icon: '🏭' },
-    { coords: [18.9894, 73.1175], title: 'Transport (In Transit)', status: 'active', icon: '🚚' },
-    { coords: [19.0760, 72.8777], title: 'Distribution Center', status: 'pending', icon: '🏢' },
-    { coords: [19.2183, 72.9781], title: 'Retail / Delivery', status: 'pending', icon: '🛒' }
-  ];
-
-  const latLngs = waypoints.map(w => w.coords);
-
-  // Draw connecting line
-  L.polyline(latLngs, {
+  // We will initialize with an empty map line and points, and update them when we fetch data.
+  window.mapPolyline = L.polyline([], {
     color: '#3b82f6',
     weight: 3,
     dashArray: '6, 8',
     opacity: 0.8
   }).addTo(leafletMap);
 
-  // Add custom markers
-  waypoints.forEach((wp, index) => {
-    const isCompleted = wp.status === 'completed';
-    const isActive = wp.status === 'active';
-    
-    const pinColor = isCompleted ? '#22c55e' : (isActive ? '#3b82f6' : '#94a3b8');
-    
-    const customHtml = `
-      <div style="
-        width: 28px; height: 28px; border-radius: 50%;
-        background: ${pinColor}; color: white;
-        display: grid; place-items: center; font-size: 14px;
-        box-shadow: 0 4px 12px ${pinColor}88; border: 2px solid white;
-      ">
-        ${wp.icon}
-      </div>
-    `;
+  window.mapMarkers = [];
+}
 
-    const customIcon = L.divIcon({
-      html: customHtml,
-      className: '',
-      iconSize: [28, 28],
-      iconAnchor: [14, 14]
-    });
+function updateMapWaypoints(rows) {
+  if (!leafletMap || !window.mapPolyline) return;
 
-    L.marker(wp.coords, { icon: customIcon })
-      .bindPopup(`<strong>${wp.title}</strong>`)
-      .addTo(leafletMap);
+  // Clear old markers
+  window.mapMarkers.forEach(m => leafletMap.removeLayer(m));
+  window.mapMarkers = [];
+
+  const latLngs = [];
+  rows.forEach((row, index) => {
+    if (row.latitude && row.longitude) {
+      const coords = [row.latitude, row.longitude];
+      latLngs.push(coords);
+
+      const isActive = index === 0; // Most recent is active
+      const pinColor = isActive ? '#3b82f6' : '#22c55e';
+      let iconChar = '📦';
+      if (row.current_stage === 'field') iconChar = '🌾';
+      else if (row.current_stage === 'warehouse') iconChar = '🏭';
+      else if (row.current_stage === 'transport') iconChar = '🚚';
+      else if (row.current_stage === 'retailer') iconChar = '🏢';
+      else if (row.current_stage === 'consumer') iconChar = '🛒';
+      
+      const customHtml = `
+        <div style="
+          width: 28px; height: 28px; border-radius: 50%;
+          background: ${pinColor}; color: white;
+          display: grid; place-items: center; font-size: 14px;
+          box-shadow: 0 4px 12px ${pinColor}88; border: 2px solid white;
+        ">
+          ${iconChar}
+        </div>
+      `;
+
+      const customIcon = L.divIcon({
+        html: customHtml,
+        className: '',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+
+      const marker = L.marker(coords, { icon: customIcon })
+        .bindPopup(`<strong>${(row.current_stage || 'Unknown').toUpperCase()}</strong><br>Time: ${row.timestamp}`)
+        .addTo(leafletMap);
+      
+      window.mapMarkers.push(marker);
+    }
   });
 
-  leafletMap.fitBounds(latLngs, { padding: [30, 30] });
+  window.mapPolyline.setLatLngs(latLngs);
+  if (latLngs.length > 0) {
+    leafletMap.fitBounds(latLngs, { padding: [30, 30], maxZoom: 14 });
+  }
 }
 
 function updateMapTileTheme(theme) {
@@ -133,10 +152,10 @@ function initSparklines() {
   if (typeof Chart === 'undefined') return;
 
   const sparkConfigs = [
-    { id: 'temp-sparkline', data: [4.1, 4.3, 4.2, 4.5, 4.7, 4.4, 4.3], color: '#3b82f6' },
-    { id: 'humidity-sparkline', data: [62, 65, 68, 67, 65, 64, 65], color: '#a855f7' },
-    { id: 'co2-sparkline', data: [420, 415, 412, 408, 412, 410, 412], color: '#06b6d4' },
-    { id: 'light-sparkline', data: [310, 325, 318, 320, 322, 319, 320], color: '#f59e0b' }
+    { id: 'temp-sparkline', data: [], color: '#3b82f6' },
+    { id: 'humidity-sparkline', data: [], color: '#a855f7' },
+    { id: 'co2-sparkline', data: [], color: '#06b6d4' },
+    { id: 'light-sparkline', data: [], color: '#f59e0b' }
   ];
 
   sparkConfigs.forEach(cfg => {
@@ -176,13 +195,26 @@ async function fetchDashboardData() {
     if (resKpi.ok) {
       const kpis = await resKpi.json();
       if (kpis.total_batches !== undefined) {
-        document.getElementById('kpi-total-products').textContent = kpis.total_batches || 128;
+        document.getElementById('kpi-total-products').textContent = kpis.total_batches;
       }
       if (kpis.active_shipments !== undefined) {
-        document.getElementById('kpi-shipments').textContent = kpis.active_shipments || 35;
+        document.getElementById('kpi-shipments').textContent = kpis.active_shipments;
       }
       if (kpis.blockchain_transactions !== undefined) {
-        document.getElementById('kpi-blockchain-tx').textContent = `${Math.min(Math.round((kpis.blockchain_transactions / (kpis.total_sensors || 1)) * 100), 100)}%`;
+        document.getElementById('kpi-blockchain-tx').textContent = kpis.blockchain_transactions;
+        const verifiedPct = Math.min(Math.round((kpis.blockchain_transactions / (kpis.total_sensors || 1)) * 100), 100);
+        document.getElementById('kpi-verified').textContent = `${verifiedPct}%`;
+      }
+      if (kpis.total_sensors !== undefined) {
+        // Mock connected devices based on total sensors recorded
+        document.getElementById('kpi-sensors').textContent = kpis.total_sensors;
+      }
+      if (kpis.alerts_today !== undefined) {
+        document.getElementById('kpi-alerts').textContent = kpis.alerts_today;
+      }
+      if (kpis.healthy_shipments !== undefined && kpis.total_batches > 0) {
+        const healthPct = Math.min(Math.round((kpis.healthy_shipments / kpis.total_batches) * 100), 100);
+        document.getElementById('kpi-health').textContent = `${healthPct}%`;
       }
     }
 
@@ -190,20 +222,42 @@ async function fetchDashboardData() {
     const resData = await fetchWithAuth('/data');
     if (resData.ok) {
       const json = await resData.json();
-      const rows = (json.data || []).slice(0, 5);
+      const rows = json.data || [];
+      const latest = json.latest || (rows.length > 0 ? rows[0] : null);
       
-      if (rows.length > 0) {
-        // Update Live IoT Sensors from the latest reading
-        const latest = rows[0];
+      if (latest) {
+        // Update Live IoT Sensors from the latest reading (now proper dict objects)
         const tempEl = document.getElementById('sensor-val-temp');
         const humEl = document.getElementById('sensor-val-hum');
-        if (tempEl && latest.temperature !== null) tempEl.textContent = `${latest.temperature.toFixed(1)} °C`;
-        if (humEl && latest.humidity !== null) humEl.textContent = `${latest.humidity.toFixed(1)} %`;
+        if (tempEl && latest.temperature !== null && latest.temperature !== undefined)
+          tempEl.textContent = `${parseFloat(latest.temperature).toFixed(1)} °C`;
+        if (humEl && latest.humidity !== null && latest.humidity !== undefined)
+          humEl.textContent = `${parseFloat(latest.humidity).toFixed(1)} %`;
+        
+        // Update sparkline data based on recent history (rows are now dicts)
+        const temps = rows.map(r => r.temperature).filter(v => v !== null).reverse().slice(-7);
+        const hums  = rows.map(r => r.humidity).filter(v => v !== null).reverse().slice(-7);
+        
+        if (sparklineCharts['temp-sparkline'] && temps.length > 0) {
+          sparklineCharts['temp-sparkline'].data.datasets[0].data = temps;
+          sparklineCharts['temp-sparkline'].data.labels = temps.map(() => '');
+          sparklineCharts['temp-sparkline'].update();
+        }
+        if (sparklineCharts['humidity-sparkline'] && hums.length > 0) {
+          sparklineCharts['humidity-sparkline'].data.datasets[0].data = hums;
+          sparklineCharts['humidity-sparkline'].data.labels = hums.map(() => '');
+          sparklineCharts['humidity-sparkline'].update();
+        }
+
+        // Update Map Waypoints with real GPS from sensor data
+        if (typeof updateMapWaypoints === 'function') {
+          updateMapWaypoints(rows);
+        }
       }
 
       const tbody = document.getElementById('blockchain-table-body');
       if (tbody && rows.length > 0) {
-        tbody.innerHTML = rows.map(r => {
+        tbody.innerHTML = rows.slice(0, 5).map(r => {
           const hash = r.block_hash || '';
           const fabricTx = r.fabric_tx_id;
           
@@ -219,7 +273,7 @@ async function fetchDashboardData() {
           }
           
           return `<tr>
-              <td><a href="#" class="tx-hash" title="${fabricTx || hash}">${fabricTx ? fabricTx.slice(0,10)+'...' : shortHash}</a></td>
+              <td><a href="#" class="tx-hash" title="${fabricTx || hash}">${fabricTx ? fabricTx.slice(0,12)+'...' : shortHash}</a></td>
               <td>📦 ${r.batch_id || 'Unknown'}</td>
               <td>${(r.current_stage || 'Farm').toUpperCase()}</td>
               <td>${r.timestamp || '--'}</td>

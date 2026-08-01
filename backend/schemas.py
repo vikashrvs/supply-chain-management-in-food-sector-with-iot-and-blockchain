@@ -22,6 +22,7 @@ class KPIs(BaseModel):
     blockchain_transactions: int
     alerts_today: int
     healthy_shipments: int
+    fabric_available: bool = False
 
 class SensorReading(BaseModel):
     batch_id: str = Field(..., min_length=1, max_length=50)

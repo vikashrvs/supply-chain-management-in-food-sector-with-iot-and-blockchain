@@ -21,6 +21,7 @@ from auth import router as auth_router
 from routes.sensor import router as sensor_router
 from routes.tracking import router as tracking_router
 from routes.blockchain import router as blockchain_router
+from routes.agents import router as agents_router
 from mqtt_handler import setup_mqtt, shutdown_mqtt
 from services.fabric_client import check_fabric_connection, start_background_checker
 
@@ -100,6 +101,7 @@ def get_kpis():
                 WHERE id IN (SELECT MAX(id) FROM sensor_data GROUP BY COALESCE(NULLIF(batch_id,''), product_id))
             ) WHERE temperature BETWEEN 0 AND 30 AND humidity BETWEEN 10 AND 95"""
         )[0][0]
+        from services import fabric_client
         return KPIs(
             total_batches=total_batches,
             total_sensors=total_sensors,
@@ -107,6 +109,7 @@ def get_kpis():
             blockchain_transactions=blockchain_tx,
             alerts_today=alerts_today,
             healthy_shipments=healthy_shipments,
+            fabric_available=bool(fabric_client.FABRIC_AVAILABLE),
         )
     except sqlite3.Error as e:
         import logging
@@ -115,6 +118,7 @@ def get_kpis():
 app.include_router(sensor_router)
 app.include_router(tracking_router)
 app.include_router(blockchain_router)
+app.include_router(agents_router)
 
 
 @app.get("/", include_in_schema=False)

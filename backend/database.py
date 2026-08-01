@@ -140,6 +140,7 @@ def row_to_dict(row):
         "status": status,
         "block_hash": block_hash,
         "blockchain_verification": "Blockchain Verified ✓" if block_hash else "Pending",
+        "fabric_tx_id": row["fabric_tx_id"],
         "field_hash": row["field_hash"] if "field_hash" in row.keys() and row["field_hash"] else None,
         "is_active": is_active,
         "minutes_since_update": age_minutes,
@@ -276,10 +277,10 @@ def insert_sensor_data(data):
     field_hash = compute_record_hash(record)
 
     # Try to submit to Hyperledger Fabric (returns txId or None)
-    from services.fabric_client import submit_to_fabric, FABRIC_AVAILABLE
+    from services import fabric_client
     fabric_tx_id = None
-    if FABRIC_AVAILABLE:
-        fabric_tx_id = submit_to_fabric(record["batch_id"], record)
+    if fabric_client.FABRIC_AVAILABLE:
+        fabric_tx_id = fabric_client.submit_to_fabric(record["batch_id"], record)
 
     with get_connection() as conn:
         cursor = conn.cursor()

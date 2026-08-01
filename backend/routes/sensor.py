@@ -29,9 +29,9 @@ def get_data(product_id: str | None = Query(default=None)):
         params = (product_id, product_id, product_id)
 
     rows = fetch_record_rows(where_clause=where_clause, params=params, order_by="sd.id DESC", limit=50)
-    legacy_rows = [row_to_legacy_list(row) for row in rows]
-    latest = row_to_dict(rows[0]) if rows else None
-    return {"data": legacy_rows, "latest": latest}
+    dict_rows = [row_to_dict(row) for row in rows]
+    latest = dict_rows[0] if dict_rows else None
+    return {"data": dict_rows, "latest": latest}
 
 
 @router.get("/batches")
