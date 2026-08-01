@@ -9,3 +9,4 @@ blockchain/temp_ctor.json
 blockchain/temp_payload.json
 *.zip
 query
+test_demo/
