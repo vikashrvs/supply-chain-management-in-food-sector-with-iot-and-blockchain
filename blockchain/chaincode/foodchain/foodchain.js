@@ -30,7 +30,11 @@ class FoodChainContract extends Contract {
         // Role-based access control via MSP
         const clientMSP = ctx.clientIdentity.getMSPID();
         sensorData.recordedBy = clientMSP;
-        sensorData.recordedAt = new Date().toISOString();
+        const txTimestamp = ctx.stub.getTxTimestamp();
+        sensorData.recordedAt = new Date(
+            Number(txTimestamp.seconds) * 1000 +
+            Math.floor(txTimestamp.nanos / 1000000)
+        ).toISOString();
         sensorData.txId = ctx.stub.getTxID();
 
         // Compliance check — smart contract enforced thresholds

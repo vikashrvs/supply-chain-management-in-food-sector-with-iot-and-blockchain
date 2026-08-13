@@ -1,9 +1,5 @@
 from crewai import Agent
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-from agents.llm import llm
+from ai.llm import llm
 
 iot_agent = Agent(
     role="IoT Safety Analyst",

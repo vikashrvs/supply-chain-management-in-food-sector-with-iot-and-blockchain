@@ -435,11 +435,11 @@
                             <button class="role-btn active" type="button" onclick="selectRole(this, 'admin')">
                                 <i class="fa-solid fa-shield-halved"></i> Admin
                             </button>
-                            <button class="role-btn" type="button" onclick="selectRole(this, 'farmer')">
-                                <i class="fa-solid fa-seedling"></i> Farmer
+                            <button class="role-btn" type="button" onclick="selectRole(this, 'producer')">
+                                <i class="fa-solid fa-seedling"></i> Producer
                             </button>
-                            <button class="role-btn" type="button" onclick="selectRole(this, 'retailer')">
-                                <i class="fa-solid fa-store"></i> Retailer
+                            <button class="role-btn" type="button" onclick="selectRole(this, 'distributer')">
+                                <i class="fa-solid fa-store"></i> Distributer
                             </button>
                         </div>
                     </div>
@@ -556,8 +556,9 @@
                 // Offline demo fallback (credentials hidden from UI, but still active for prototype testing)
                 const demoUsers = {
                     admin: { u: 'admin', p: 'admin123', name: 'Raj Vikash' },
-                    farmer: { u: 'farmer', p: 'farmer123', name: 'Farmer John' },
-                    retailer: { u: 'retailer', p: 'retail123', name: 'Store Manager' }
+                    producer: { u: 'producer', p: 'producer123', name: 'Producer John' },
+                    distributer: { u: 'distributer', p: 'distributer123', name: 'Distributer John' },
+                    
                 };
                 const match = demoUsers[selectedRole];
                 if ((username === 'admin' && password === 'admin123') || (match && username === match.u && password === match.p)) {

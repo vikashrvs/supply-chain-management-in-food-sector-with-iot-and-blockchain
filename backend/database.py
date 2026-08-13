@@ -72,6 +72,9 @@ from utils import (
 
 def build_record(data):
     location = data.get("location") or {}
+    gas_value = data.get("gas_value")
+    if gas_value is None:
+        gas_value = data.get("environmental_value")
     batch_id = normalize_batch_id(
         data.get("batch_id"),
         product_id=data.get("product_id"),
@@ -91,8 +94,9 @@ def build_record(data):
         "timestamp": data.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "temperature": data.get("temperature"),
         "humidity": data.get("humidity"),
-        "latitude": location.get("lat"),
-        "longitude": location.get("lng"),
+        "latitude": data.get("latitude") if data.get("latitude") is not None else location.get("lat"),
+        "longitude": data.get("longitude") if data.get("longitude") is not None else location.get("lng"),
+        "gas_value": gas_value,
         "product_id": normalize_batch_id(data.get("product_id"), batch_id),
         "status": status,
         "product_name": data.get("product_name") or product,
@@ -101,6 +105,14 @@ def build_record(data):
         "product": product,
         "sensor_id": (data.get("sensor_id") or "UNKNOWN_SENSOR").strip() or "UNKNOWN_SENSOR",
         "current_stage": current_stage,
+        "transportation_status": data.get("transportation_status") or data.get("status"),
+        "alert_status": data.get("alert_status") or "NORMAL",
+        "telemetry_mode": data.get("telemetry_mode") or "Physical ESP32 Telemetry",
+        "origin_name": data.get("origin_name"),
+        "destination_name": data.get("destination_name"),
+        "replay_record_id": data.get("record_id") or data.get("replay_record_id"),
+        "alert_flag": data.get("alert_flag") if data.get("alert_flag") is not None else (1 if (data.get("alert_status") and data.get("alert_status") != "NORMAL") else 0),
+        "alert_source": data.get("alert_source") or data.get("source") or "sensor",
     }
 
 
@@ -111,6 +123,14 @@ def row_to_dict(row):
     current_stage = normalize_stage(row["current_stage"], row["status"])
     status = normalize_status(row["status"], current_stage)
     edge_health = evaluate_edge_health(current_stage, row["temperature"], row["humidity"])
+    gas_value = row["gas_value"] if "gas_value" in row.keys() else None
+    if gas_value is not None and gas_value > 180:
+        edge_health["alerts"].append(f"Gas/environment value {gas_value} ppm is above the demo limit (180 ppm).")
+        edge_health["alert_count"] = len(edge_health["alerts"])
+        edge_health["risk_level"] = "critical" if edge_health["alert_count"] >= 2 else "warning"
+        edge_health["health_label"] = edge_health["risk_level"].title()
+        edge_health["is_healthy"] = False
+        edge_health["edge_decision"] = "Review refrigerated vehicle environment before the next checkpoint."
     parsed_timestamp = parse_timestamp(row["timestamp"])
     age_minutes = None
     is_active = False
@@ -127,6 +147,7 @@ def row_to_dict(row):
         "humidity": row["humidity"],
         "latitude": row["latitude"],
         "longitude": row["longitude"],
+        "gas_value": gas_value,
         "location": {"lat": row["latitude"], "lng": row["longitude"]},
         "batch_id": batch_id,
         "product_uid": product_uid,
@@ -139,9 +160,18 @@ def row_to_dict(row):
         "current_stage_index": SUPPLY_CHAIN_STAGES.index(current_stage),
         "status": status,
         "block_hash": block_hash,
+        "fabric_tx_id": row["fabric_tx_id"] if "fabric_tx_id" in row.keys() and row["fabric_tx_id"] else None,
         "blockchain_verification": "Blockchain Verified ✓" if block_hash else "Pending",
-        "fabric_tx_id": row["fabric_tx_id"],
         "field_hash": row["field_hash"] if "field_hash" in row.keys() and row["field_hash"] else None,
+        "transportation_status": row["transportation_status"] if "transportation_status" in row.keys() and row["transportation_status"] else status,
+        "alert_status": row["alert_status"] if "alert_status" in row.keys() and row["alert_status"] else ("ALERT" if edge_health["alert_count"] else "NORMAL"),
+        "telemetry_mode": row["telemetry_mode"] if "telemetry_mode" in row.keys() and row["telemetry_mode"] else "Physical ESP32 Telemetry",
+        "origin_name": row["origin_name"] if "origin_name" in row.keys() else None,
+        "destination_name": row["destination_name"] if "destination_name" in row.keys() else None,
+        "replay_record_id": row["replay_record_id"] if "replay_record_id" in row.keys() else None,
+        "alert_flag": row["alert_flag"] if "alert_flag" in row.keys() and row["alert_flag"] is not None else (1 if edge_health["alert_count"] else 0),
+        "alert_source": row["alert_source"] if "alert_source" in row.keys() and row["alert_source"] else ("Aero" if edge_health["alert_count"] else "sensor"),
+        "source": row["alert_source"] if "alert_source" in row.keys() and row["alert_source"] else ("Aero" if edge_health["alert_count"] else "sensor"),
         "is_active": is_active,
         "minutes_since_update": age_minutes,
         **edge_health,
@@ -276,11 +306,8 @@ def insert_sensor_data(data):
     # Compute per-record field hash (tamper-detection fingerprint)
     field_hash = compute_record_hash(record)
 
-    # Try to submit to Hyperledger Fabric (returns txId or None)
-    from services import fabric_client
-    fabric_tx_id = None
-    if fabric_client.FABRIC_AVAILABLE:
-        fabric_tx_id = fabric_client.submit_to_fabric(record["batch_id"], record)
+    # Insert record immediately (fabric_tx_id = None until async submission completes)
+    from services.fabric_client import FABRIC_AVAILABLE, submit_to_fabric_async
 
     with get_connection() as conn:
         cursor = conn.cursor()
@@ -300,8 +327,15 @@ def insert_sensor_data(data):
                 humidity,
                 latitude,
                 longitude,
+                gas_value,
                 product_id,
                 status,
+                transportation_status,
+                alert_status,
+                telemetry_mode,
+                origin_name,
+                destination_name,
+                replay_record_id,
                 product_name,
                 batch_id,
                 product_uid,
@@ -313,7 +347,7 @@ def insert_sensor_data(data):
                 field_hash,
                 fabric_tx_id
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 record["timestamp"],
@@ -321,8 +355,15 @@ def insert_sensor_data(data):
                 record["humidity"],
                 record["latitude"],
                 record["longitude"],
+                record["gas_value"],
                 record["product_id"],
                 record["status"],
+                record["transportation_status"],
+                record["alert_status"],
+                record["telemetry_mode"],
+                record["origin_name"],
+                record["destination_name"],
+                record["replay_record_id"],
                 record["product_name"],
                 record["batch_id"],
                 record["product_uid"],
@@ -332,13 +373,285 @@ def insert_sensor_data(data):
                 registry_id,
                 block_hash,
                 field_hash,
-                fabric_tx_id,   # Real Fabric txId when online, None when offline
+                None,   # fabric_tx_id starts NULL; async callback fills it in
             ),
+        )
+        row_id = cursor.lastrowid
+        conn.commit()
+
+    # Async Fabric submission — does NOT block MQTT/replay ingestion
+    if FABRIC_AVAILABLE and should_submit_fabric_event(record):
+        def _update_fabric_tx(tx_id):
+            if tx_id:
+                try:
+                    with get_connection() as upd_conn:
+                        upd_conn.execute(
+                            "UPDATE sensor_data SET fabric_tx_id = ? WHERE id = ?",
+                            (tx_id, row_id),
+                        )
+                        upd_conn.commit()
+                except Exception as e:
+                    import logging as _log
+                    _log.getLogger(__name__).warning(f"DB fabric_tx_id update failed: {e}")
+
+        submit_to_fabric_async(record["batch_id"], record, callback=_update_fabric_tx)
+
+
+def should_submit_fabric_event(record):
+    """Decide whether to submit this record to Hyperledger Fabric.
+    
+    Policy: submit ALL records when Fabric is online.
+    We previously only submitted alerts/delivered to reduce load,
+    but this left most fabric_tx_id fields as NULL in the DB.
+    With async submission this no longer blocks the MQTT path.
+    """
+    return True  # Submit every sensor record to Fabric when online
+
+
+
+def clear_demo_transportation_received(batch_id="FC-001"):
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            DELETE FROM sensor_data
+            WHERE batch_id = ? AND COALESCE(telemetry_mode, '') = 'Demo Telemetry / Replay Mode'
+            """,
+            (batch_id,),
         )
         conn.commit()
 
 
+def fetch_replay_records(batch_id="FC-001"):
+    return fetch_rows(
+        """
+        SELECT *
+        FROM replay_telemetry
+        WHERE batch_id = ?
+        ORDER BY record_id ASC
+        """,
+        (batch_id,),
+    )
+
+
+DEMO_REPLAY_BATCHES = [
+    {
+        "batch_id": "FC-001",
+        "device_id": "ESP32-01",
+        "product": "Refrigerated Produce Batch",
+        "product_uid": "UID-FC-001-DEMO",
+        "origin": "Bengaluru Cold Storage Facility",
+        "destination": "Mysuru Distribution Center",
+        "start_time": datetime(2026, 8, 11, 9, 0, 0),
+        "route": [
+            (12.971599, 77.594566),
+            (12.917800, 77.520900),
+            (12.828400, 77.417600),
+            (12.723900, 77.280900),
+            (12.640200, 77.074300),
+            (12.521800, 76.895100),
+            (12.421200, 76.704700),
+            (12.348500, 76.656500),
+            (12.295810, 76.639381),
+        ],
+    },
+    {
+        "batch_id": "FC-002",
+        "device_id": "ESP32-02",
+        "product": "Cold Chain Dairy Batch",
+        "product_uid": "UID-FC-002-DEMO",
+        "origin": "Bengaluru Processing Facility",
+        "destination": "Mandya Warehouse",
+        "start_time": datetime(2026, 8, 11, 9, 20, 0),
+        "route": [
+            (12.935200, 77.624500),
+            (12.888000, 77.551000),
+            (12.799500, 77.436200),
+            (12.713700, 77.283800),
+            (12.646800, 77.115400),
+            (12.574200, 76.983900),
+            (12.521600, 76.895800),
+        ],
+    },
+    {
+        "batch_id": "FC-003",
+        "device_id": "ESP32-03",
+        "product": "Retail Distribution Produce Batch",
+        "product_uid": "UID-FC-003-DEMO",
+        "origin": "Bengaluru Warehouse",
+        "destination": "Hassan Retail Distribution Hub",
+        "start_time": datetime(2026, 8, 11, 9, 40, 0),
+        "route": [
+            (13.020600, 77.647900),
+            (13.006800, 77.569100),
+            (13.001300, 77.484900),
+            (13.004400, 77.326600),
+            (13.006900, 77.103900),
+            (12.959100, 76.820500),
+            (12.944700, 76.617300),
+            (13.003300, 76.102800),
+        ],
+    },
+]
+
+
+def get_replay_batch_config(batch_id="FC-001"):
+    for batch in DEMO_REPLAY_BATCHES:
+        if batch["batch_id"] == batch_id:
+            return batch
+    return DEMO_REPLAY_BATCHES[0]
+
+
+def get_replay_batch_options():
+    return [
+        {
+            "batch_id": batch["batch_id"],
+            "device_id": f'{batch["device_id"]} (Demo)',
+            "product": batch["product"],
+            "origin": batch["origin"],
+            "destination": batch["destination"],
+        }
+        for batch in DEMO_REPLAY_BATCHES
+    ]
+
+
+def replay_row_to_payload(row):
+    return {
+        "record_id": row["record_id"],
+        "device_id": row["device_id"],
+        "sensor_id": row["device_id"],
+        "batch_id": row["batch_id"],
+        "product_uid": row["product_uid"],
+        "product": row["product"],
+        "product_name": row["product"],
+        "product_id": row["batch_id"],
+        "timestamp": row["timestamp"],
+        "temperature": row["temperature"],
+        "humidity": row["humidity"],
+        "latitude": row["latitude"],
+        "longitude": row["longitude"],
+        "location": {"lat": row["latitude"], "lng": row["longitude"]},
+        "gas_value": row["gas_value"],
+        "current_stage": "consumer" if row["transportation_status"] == "DELIVERED" else "transport",
+        "status": "Delivered" if row["transportation_status"] == "DELIVERED" else "In Transit",
+        "transportation_status": row["transportation_status"],
+        "alert_status": row["alert_status"],
+        "telemetry_mode": "Demo Telemetry / Replay Mode",
+        "origin_name": row["origin_name"],
+        "destination_name": row["destination_name"],
+        "alert_flag": row["alert_flag"] if "alert_flag" in row.keys() else (1 if row["alert_status"] != "NORMAL" else 0),
+        "alert_source": row["alert_source"] if "alert_source" in row.keys() else "sensor",
+        "source": row["alert_source"] if "alert_source" in row.keys() else "sensor",
+    }
+
+
+def seed_demo_replay_dataset(cursor):
+    expected = len(DEMO_REPLAY_BATCHES) * 100
+    cursor.execute("SELECT COUNT(*) AS count FROM replay_telemetry")
+    if cursor.fetchone()["count"] == expected:
+        return
+
+    cursor.execute("DELETE FROM replay_telemetry")
+    for batch in DEMO_REPLAY_BATCHES:
+        for record in generate_demo_transportation_records(batch):
+            cursor.execute(
+                """
+                INSERT INTO replay_telemetry (
+                    record_id, device_id, batch_id, product_uid, product, timestamp,
+                    temperature, humidity, latitude, longitude, gas_value,
+                    transportation_status, alert_status, origin_name, destination_name,
+                    telemetry_mode, alert_flag, alert_source
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record["record_id"],
+                    record["device_id"],
+                    record["batch_id"],
+                    record["product_uid"],
+                    record["product"],
+                    record["timestamp"],
+                    record["temperature"],
+                    record["humidity"],
+                    record["latitude"],
+                    record["longitude"],
+                    record["gas_value"],
+                    record["transportation_status"],
+                    record["alert_status"],
+                    record["origin_name"],
+                    record["destination_name"],
+                    record["telemetry_mode"],
+                    record["alert_flag"],
+                    record["alert_source"],
+                ),
+            )
+
+
+def generate_demo_transportation_records(batch):
+    from datetime import timedelta
+
+    route = batch["route"]
+
+    points = []
+    segments = len(route) - 1
+    for index in range(100):
+        position = (index / 99) * segments
+        segment = min(int(position), segments - 1)
+        fraction = position - segment
+        lat1, lng1 = route[segment]
+        lat2, lng2 = route[segment + 1]
+        points.append((lat1 + (lat2 - lat1) * fraction, lng1 + (lng2 - lng1) * fraction))
+
+    records = []
+    for index, (lat, lng) in enumerate(points, start=1):
+        if 45 <= index <= 53:
+            temperature = 11.6 + ((index - 45) * 0.18)
+            alert_status = "TEMPERATURE_EXCURSION"
+            alert_flag = 1
+            alert_source = "Aero"
+        elif 54 <= index <= 58:
+            temperature = 9.8 - ((index - 54) * 0.55)
+            alert_status = "RECOVERING"
+            alert_flag = 0
+            alert_source = "Data-Tron"
+        else:
+            temperature = 6.4 + ((index % 9) * 0.12)
+            alert_status = "NORMAL"
+            alert_flag = 0
+            alert_source = "sensor"
+
+        gas_value = 118 + ((index * 7) % 22)
+        if 68 <= index <= 70:
+            gas_value = 190 + ((index - 68) * 6)
+            alert_status = "ENVIRONMENT_ALERT"
+            alert_flag = 1
+            alert_source = "Orion"
+
+        records.append({
+            "record_id": index,
+            "device_id": batch["device_id"],
+            "batch_id": batch["batch_id"],
+            "product_uid": batch["product_uid"],
+            "product": batch["product"],
+            "timestamp": (batch["start_time"] + timedelta(minutes=index - 1)).strftime("%Y-%m-%d %H:%M:%S"),
+            "temperature": round(temperature, 2),
+            "humidity": round(66.5 + ((index * 5) % 17) * 0.45, 2),
+            "latitude": round(lat, 6),
+            "longitude": round(lng, 6),
+            "gas_value": round(gas_value, 2),
+            "transportation_status": "DELIVERED" if index == 100 else "IN TRANSIT",
+            "alert_status": alert_status,
+            "origin_name": batch["origin"],
+            "destination_name": batch["destination"],
+            "telemetry_mode": "Demo Telemetry / Replay Mode",
+            "alert_flag": alert_flag,
+            "alert_source": alert_source,
+        })
+    return records
+
+
 # ── Migration ────────────────────────────────────────────────────────────────
+
 
 def migrate_legacy_rows(cursor):
     sensor_columns = get_table_columns(cursor, "sensor_data")
@@ -455,9 +768,12 @@ def migrate_legacy_rows(cursor):
 def seed_default_users():
     """Insert default users if they don't exist."""
     default_users = [
-        ("admin", "admin123", "admin"),
-        ("farmer", "farmer123", "farmer"),
-        ("retailer", "retail123", "retailer"),
+        ("admin",       "admin123",       "admin"),
+        ("farmer",      "farmer123",      "farmer"),
+        ("retailer",    "retail123",      "retailer"),
+        ("producer",    "producer123",    "producer"),
+        ("distributor", "distributor123", "distributor"),
+        ("distributer", "distributer123", "distributer"),
     ]
     with get_connection() as conn:
         cursor = conn.cursor()
@@ -486,8 +802,15 @@ def init_db():
                 humidity REAL,
                 latitude REAL,
                 longitude REAL,
+                gas_value REAL,
                 product_id TEXT,
                 status TEXT,
+                transportation_status TEXT,
+                alert_status TEXT,
+                telemetry_mode TEXT,
+                origin_name TEXT,
+                destination_name TEXT,
+                replay_record_id INTEGER,
                 product_name TEXT,
                 batch_id TEXT,
                 product_uid TEXT,
@@ -496,6 +819,34 @@ def init_db():
                 current_stage TEXT,
                 product_ref INTEGER,
                 block_hash TEXT
+            )
+            """
+        )
+        cursor.execute(
+            "DROP TABLE IF EXISTS replay_telemetry"
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS replay_telemetry (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                record_id INTEGER NOT NULL,
+                device_id TEXT NOT NULL,
+                batch_id TEXT NOT NULL,
+                product_uid TEXT NOT NULL,
+                product TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                temperature REAL NOT NULL,
+                humidity REAL NOT NULL,
+                latitude REAL NOT NULL,
+                longitude REAL NOT NULL,
+                gas_value REAL,
+                transportation_status TEXT NOT NULL,
+                alert_status TEXT NOT NULL,
+                origin_name TEXT NOT NULL,
+                destination_name TEXT NOT NULL,
+                telemetry_mode TEXT NOT NULL,
+                alert_flag INTEGER DEFAULT 0,
+                alert_source TEXT DEFAULT 'sensor'
             )
             """
         )
@@ -512,12 +863,15 @@ def init_db():
             """
         )
         cursor.execute(
+            "DROP TABLE IF EXISTS users"
+        )
+        cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
-                role TEXT NOT NULL CHECK(role IN ('admin','farmer','warehouse','retailer','consumer')),
+                role TEXT NOT NULL CHECK(role IN ('admin','farmer','warehouse','retailer','consumer','producer','distributor','distributer')),
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
             """
@@ -528,6 +882,8 @@ def init_db():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sensor_product_ref ON sensor_data(product_ref)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sensor_timestamp ON sensor_data(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_registry_uid ON product_registry(product_uid)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_replay_batch ON replay_telemetry(batch_id, record_id)")
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_replay_batch_record ON replay_telemetry(batch_id, record_id)")
 
         ensure_column(cursor, "sensor_data", "product_name", "TEXT")
         ensure_column(cursor, "sensor_data", "batch_id", "TEXT")
@@ -539,8 +895,18 @@ def init_db():
         ensure_column(cursor, "sensor_data", "block_hash", "TEXT")
         ensure_column(cursor, "sensor_data", "fabric_tx_id", "TEXT")
         ensure_column(cursor, "sensor_data", "field_hash", "TEXT")
+        ensure_column(cursor, "sensor_data", "gas_value", "REAL")
+        ensure_column(cursor, "sensor_data", "transportation_status", "TEXT")
+        ensure_column(cursor, "sensor_data", "alert_status", "TEXT")
+        ensure_column(cursor, "sensor_data", "telemetry_mode", "TEXT")
+        ensure_column(cursor, "sensor_data", "origin_name", "TEXT")
+        ensure_column(cursor, "sensor_data", "destination_name", "TEXT")
+        ensure_column(cursor, "sensor_data", "replay_record_id", "INTEGER")
+        ensure_column(cursor, "sensor_data", "alert_flag", "INTEGER DEFAULT 0")
+        ensure_column(cursor, "sensor_data", "alert_source", "TEXT DEFAULT 'sensor'")
 
         migrate_legacy_rows(cursor)
+        seed_demo_replay_dataset(cursor)
         conn.commit()
 
     seed_default_users()

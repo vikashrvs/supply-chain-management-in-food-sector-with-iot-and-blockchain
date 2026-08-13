@@ -1,10 +1,6 @@
 from crewai import Agent
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-from agents.llm import llm
-from agents.tools import get_shipment_data
+from ai.llm import llm
+from ai.tools import get_shipment_data
 
 db_agent = Agent(
     role="Database Records Specialist",
