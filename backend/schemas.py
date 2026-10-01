@@ -45,7 +45,7 @@ class SensorReading(BaseModel):
     status: Optional[str] = None
     transportation_status: Optional[str] = None
     alert_status: Optional[str] = None
-    telemetry_mode: Optional[str] = "Demo Telemetry / Replay Mode"
+    telemetry_mode: Optional[str] = "Physical ESP32 Telemetry"
     origin_name: Optional[str] = None
     destination_name: Optional[str] = None
     timestamp: Optional[str] = None

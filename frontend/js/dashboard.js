@@ -6,7 +6,7 @@ let originMarker = null;
 let destinationMarker = null;
 let sparklineCharts = {};
 let replayRoute = [];
-let selectedReplayBatch = 'FC-001';
+let selectedReplayBatch = '';
 
 document.addEventListener('DOMContentLoaded', () => {
   initUserProfile();
@@ -90,9 +90,13 @@ async function initLeafletMap() {
 
 async function loadReplayRoute(batchId) {
   try {
-    const res = await fetchWithAuth(`/api/replay/dataset?batch_id=${encodeURIComponent(batchId)}`);
+    const url = batchId ? `/api/replay/dataset?batch_id=${encodeURIComponent(batchId)}&demo=true` : '/api/replay/dataset?demo=true';
+    const res = await fetchWithAuth(url);
     if (res.ok) {
       const dataset = await res.json();
+      if (dataset.batch_id) {
+        selectedReplayBatch = dataset.batch_id;
+      }
       replayRoute = (dataset.records || []).map(r => [r.latitude, r.longitude]);
       setText('demo-origin', dataset.origin);
       setText('demo-destination', dataset.destination);
@@ -220,19 +224,16 @@ function initReplayControls() {
     selectedReplayBatch = batchSelect.value || selectedReplayBatch;
     batchSelect.addEventListener('change', async () => {
       selectedReplayBatch = batchSelect.value;
-      const intervalSec = speed?.value || 2;
-      // Selecting batch starts playing back that batch's prerecorded readings from DB
-      await postReplay(`/api/replay/start?batch_id=${encodeURIComponent(selectedReplayBatch)}&interval_seconds=${intervalSec}&reset=true`);
       await loadReplayRoute(selectedReplayBatch);
       drawReplayRoute();
       await fetchDashboardData();
     });
   }
 
-  bindReplayButton('replay-start', () => postReplay(`/api/replay/start?batch_id=${encodeURIComponent(selectedReplayBatch)}&interval_seconds=${speed?.value || 2}&reset=false`));
-  bindReplayButton('replay-pause', () => postReplay('/api/replay/pause'));
-  bindReplayButton('replay-step', () => postReplay('/api/replay/step'));
-  bindReplayButton('replay-reset', () => postReplay(`/api/replay/reset?batch_id=${encodeURIComponent(selectedReplayBatch)}`));
+  bindReplayButton('replay-start', () => postReplay(`/api/replay/start?batch_id=${encodeURIComponent(selectedReplayBatch)}&interval_seconds=${speed?.value || 2}&reset=false&demo=true`));
+  bindReplayButton('replay-pause', () => postReplay('/api/replay/pause?demo=true'));
+  bindReplayButton('replay-step', () => postReplay('/api/replay/step?demo=true'));
+  bindReplayButton('replay-reset', () => postReplay(`/api/replay/reset?batch_id=${encodeURIComponent(selectedReplayBatch)}&demo=true`));
 }
 
 function bindReplayButton(id, handler) {
@@ -369,12 +370,23 @@ async function fetchKpis() {
 }
 
 async function fetchTransportation() {
-  const res = await fetchWithAuth(`/api/replay/transportation?batch_id=${encodeURIComponent(selectedReplayBatch)}`);
+  const url = selectedReplayBatch ? `/api/replay/transportation?batch_id=${encodeURIComponent(selectedReplayBatch)}&demo=true` : '/api/replay/transportation?demo=true';
+  const res = await fetchWithAuth(url);
   if (!res.ok) return;
   const state = await res.json();
+  if (state.batch_id && !selectedReplayBatch) {
+    selectedReplayBatch = state.batch_id;
+  }
   const latest = state.latest;
   const progress = state.progress_pct || 0;
   const history = state.history || [];
+
+  if (state.available_batches && state.available_batches.length) {
+    const select = document.getElementById('replay-batch-select');
+    if (select && (!select.children.length || !select.value)) {
+      updateBatchOptions(state.available_batches, state.batch_id);
+    }
+  }
 
   setText('demo-origin', state.origin);
   setText('demo-destination', state.destination);
@@ -647,7 +659,7 @@ async function fetchAlerts() {
 
   // 2. Fetch Replay Transportation History Alerts
   try {
-    const resReplay = await fetchWithAuth(`/api/replay/transportation?batch_id=${encodeURIComponent(selectedReplayBatch)}`);
+    const resReplay = await fetchWithAuth(`/api/replay/transportation?batch_id=${encodeURIComponent(selectedReplayBatch)}&demo=true`);
     if (resReplay.ok) {
       const state = await resReplay.json();
       const replayAlerts = (state.history || []).filter(row => row.risk_level !== 'stable' || row.alert_status !== 'NORMAL' || row.alert_flag);
@@ -704,7 +716,7 @@ async function fetchAlerts() {
       <div class="alert-content" style="flex:1;">
         <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
           <strong>Batch ${item.batch_id}: ${item.rule || item.severity.toUpperCase()}</strong>
-          <span class="alert-source-pill ${sourceClass}"><i class="fa-solid fa-robot"></i> Source: ${sourceName}</span>
+          <span class="alert-source-pill ${sourceClass}"><i class="fa-solid fa-code"></i> ${sourceName}</span>
         </div>
         <p style="margin-top:2px;">${item.message}</p>
         <p style="font-size:10px; margin-top:3px; color:${iconColor};">${item.recommendation}</p>

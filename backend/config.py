@@ -10,6 +10,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "food_chain.db"
 FRONTEND_DIR = BASE_DIR.parent / "frontend"
+FRONTEND_LEGACY_DIR = BASE_DIR.parent / "old_frontend"   # kept safe — switch back anytime
 
 # ── Supply Chain Constants ───────────────────────────────────────────────────
 SUPPLY_CHAIN_STAGES = ["field", "warehouse", "transport", "retailer", "consumer"]
@@ -48,6 +49,9 @@ STAGE_THRESHOLDS = {
 SECRET_KEY = os.environ.get("FOODCHAIN_SECRET_KEY", "foodchain-vtu-project-secret-key-2026")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
+ENABLE_REPLAY_INGESTION = os.environ.get("FOODCHAIN_ENABLE_REPLAY", "").strip().lower() in {
+    "1", "true", "yes", "on"
+}
 
 # ── SQL Expression Constants ────────────────────────────────────────────────
 BATCH_KEY_EXPR = (

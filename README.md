@@ -59,33 +59,29 @@ Simply double-click or run:
 ```cmd
 start.bat
 ```
-*This automatically launches Hyperledger Fabric (WSL2), Mosquitto MQTT Broker, FastAPI Backend (`http://127.0.0.1:8001`), prepares the dashboard-controlled demo replay, and opens the Web Portal in your browser.*
+*This automatically launches Hyperledger Fabric (WSL2), Mosquitto MQTT Broker, and the FastAPI Backend (`http://127.0.0.1:8001`) for physical ESP32 telemetry. The operational dashboards read live MQTT data only.*
 
-### Transportation Demo Replay
+### Explicit Legacy Demo Replay
 
-The dashboard transportation view is explicitly labeled **Demo Telemetry / Replay Mode**. It uses 100 prerecorded, deterministic telemetry records per demo batch. The current replay dataset includes:
+Replay is isolated from live operation. Replay MQTT messages on `food/sensor/replay/#` are ignored by default, and the new producer, distributor, business, and admin dashboards never call replay endpoints.
+
+For the legacy single-dashboard demo only, replay must be explicitly opted in:
 
 - `FC-001`: Bengaluru Cold Storage Facility -> Mysuru Distribution Center
 - `FC-002`: Bengaluru Processing Facility -> Mandya Warehouse
 - `FC-003`: Bengaluru Warehouse -> Hassan Retail Distribution Hub
 
-The future physical demo can use one real batch/device while keeping the same MQTT payload schema.
-
-- Default dashboard batch: `FC-001`
-- Current source: database-backed replay published through MQTT
-- Future source: Physical ESP32 + DHT11/DHT22 + gas sensor + GPS publishing the same payload schema
-
-Open `http://127.0.0.1:8001/dashboard.html`, then use **Start Transportation**, **Pause**, **Resume**, **Reset**, and the interval control. The replay publishes one record at a time through `food/sensor/replay/FC-001`; it does not represent real-time physical vehicle tracking.
+Open `http://127.0.0.1:8001/dashboard.html` only when intentionally testing the legacy demo controls. The page requests `demo=true`; it is not a source for operational dashboards. To allow replay MQTT ingestion for a controlled demo session, set `FOODCHAIN_ENABLE_REPLAY=1` before starting the backend. Leave it unset for real ESP32 operation.
 
 Useful endpoints:
 
 ```text
-GET  /api/replay/dataset?batch_id=FC-001
-GET  /api/replay/transportation?batch_id=FC-001
-POST /api/replay/start?batch_id=FC-001&interval_seconds=1.5&reset=true
-POST /api/replay/pause
-POST /api/replay/resume
-POST /api/replay/reset?batch_id=FC-001
+GET  /api/replay/dataset?batch_id=FC-001&demo=true
+GET  /api/replay/transportation?batch_id=FC-001&demo=true
+POST /api/replay/start?batch_id=FC-001&interval_seconds=1.5&reset=true&demo=true
+POST /api/replay/pause?demo=true
+POST /api/replay/step?demo=true
+POST /api/replay/reset?batch_id=FC-001&demo=true
 ```
 
 ### 2. Stop All Services
