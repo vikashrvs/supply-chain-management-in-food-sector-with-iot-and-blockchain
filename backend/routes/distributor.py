@@ -122,6 +122,9 @@ def record_transfer(
 
     with get_connection() as conn:
         cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM batches WHERE batch_id = ?", (payload.batch_id,))
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail=f"Batch '{payload.batch_id}' not found.")
         cursor.execute(
             """
             INSERT INTO batch_transfers (
@@ -134,10 +137,10 @@ def record_transfer(
                 payload.batch_id,
                 payload.event_type,
                 payload.location_name,
-                payload.latitude,
-                payload.longitude,
-                payload.temperature,
-                payload.humidity,
+                None,
+                None,
+                None,
+                None,
                 payload.notes,
                 payload.anomaly_description,
                 user["username"],
@@ -168,8 +171,6 @@ def record_transfer(
             "event_type": payload.event_type,
             "distributor": user["username"],
             "timestamp": now,
-            "temperature": payload.temperature,
-            "humidity": payload.humidity,
             "location": payload.location_name,
         }
 
@@ -199,20 +200,42 @@ def record_transfer(
         payload.event_type, payload.batch_id, user["username"],
     )
 
+    with get_connection() as conn:
+        latest_sensor = fetch_latest_sensor_row(conn.cursor(), payload.batch_id)
+    enriched = enrich_transfer_with_sensor(
+        {
+            "id": new_id,
+            "batch_id": payload.batch_id,
+            "event_type": payload.event_type,
+            "location_name": payload.location_name,
+            "notes": payload.notes,
+            "anomaly_description": payload.anomaly_description,
+            "created_by": user["username"],
+            "created_at": now,
+            "blockchain_tx_id": fabric_tx_id,
+        },
+        latest_sensor,
+    )
     return TransferEventResponse(
         id=new_id,
         batch_id=payload.batch_id,
         event_type=payload.event_type,
         location_name=payload.location_name,
-        latitude=payload.latitude,
-        longitude=payload.longitude,
-        temperature=payload.temperature,
-        humidity=payload.humidity,
+        latitude=enriched.get("latitude"),
+        longitude=enriched.get("longitude"),
+        temperature=enriched.get("temperature"),
+        humidity=enriched.get("humidity"),
         notes=payload.notes,
         anomaly_description=payload.anomaly_description,
         created_by=user["username"],
         created_at=now,
-        blockchain_tx_id=fabric_tx_id,
+        blockchain_tx_id=enriched.get("blockchain_tx_id"),
+        status=enriched.get("status"),
+        device_id=enriched.get("device_id"),
+        latest_iot=enriched.get("latest_iot"),
+        block_hash=enriched.get("block_hash"),
+        field_hash=enriched.get("field_hash"),
+        fabric_tx_id=enriched.get("fabric_tx_id"),
     )
 
 

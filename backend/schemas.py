@@ -87,13 +87,10 @@ class BatchResponse(BaseModel):
 
 class TransferEventCreate(BaseModel):
     """Schema for recording a transfer event (Distributor only)."""
+    model_config = ConfigDict(extra="forbid")
     batch_id: str = Field(..., min_length=1, max_length=50)
     event_type: str = Field(..., pattern="^(received|transferred|checkpoint|anomaly)$")
     location_name: Optional[str] = Field(default=None, max_length=200)
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    temperature: Optional[float] = Field(default=None, ge=-50, le=80)
-    humidity: Optional[float] = Field(default=None, ge=0, le=100)
     notes: Optional[str] = Field(default=None, max_length=500)
     anomaly_description: Optional[str] = Field(default=None, max_length=500)
 
