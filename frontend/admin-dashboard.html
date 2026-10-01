@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodChain - Admin Dashboard</title>
+
+    <link rel="stylesheet" href="css/shared-tokens.css">
+    <link rel="stylesheet" href="css/admin-dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <link rel="stylesheet" href="css/sidebar-detail-modal.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-badge">
+                <img src="images/logo.png" alt="FoodChain logo">
+            </div>
+            <div class="brand-info">
+                <strong>FoodChain <span class="fc-role-badge role-admin"><i class="fa-solid fa-shield-halved"></i> Admin</span></strong>
+                <span>System Access</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <span class="nav-section">Overview</span>
+            <a href="#" class="nav-item active" data-modal="dashboard"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+            <a href="#" class="nav-item" data-modal="supply-map" data-detail="map"><i class="fa-solid fa-map-location-dot"></i><span>Supply Chain Map</span></a>
+            <a href="#" class="nav-item" data-modal="iot-monitor" data-detail="sensors"><i class="fa-solid fa-microchip"></i><span>IoT Sensor Monitor</span></a>
+
+            <span class="nav-section">Blockchain</span>
+            <a href="#" class="nav-item" data-modal="ledger" data-detail="blockchain"><i class="fa-solid fa-link"></i><span>Blockchain Ledger</span></a>
+            <a href="#" class="nav-item" data-modal="batches" data-detail="products"><i class="fa-solid fa-box"></i><span>Products &amp; Batches</span></a>
+
+            <span class="nav-section">System</span>
+            <a href="#" class="nav-item" data-modal="users"><i class="fa-solid fa-users"></i><span>Users &amp; Roles</span></a>
+            <a href="#" class="nav-item nav-item-create-user" id="sidebar-create-user-btn"><i class="fa-solid fa-user-plus"></i><span>Create User</span></a>
+            <a href="#" class="nav-item" data-modal="alerts" data-detail="alerts"><i class="fa-solid fa-bell"></i><span>Alerts &amp; Notifications</span><b class="alert-badge" id="sidebar-alert-count">0</b></a>
+            <a href="#" class="nav-item" data-modal="consumer-trace"><i class="fa-solid fa-route"></i><span>Consumer Trace</span></a>
+            <a href="#" class="nav-item" data-modal="qr"><i class="fa-solid fa-qrcode"></i><span>QR Label Generator</span></a>
+            <a href="#" class="nav-item" data-modal="analytics" data-detail="analytics"><i class="fa-solid fa-chart-bar"></i><span>Analytics &amp; Reports</span></a>
+            <a href="#" class="nav-item" data-modal="analytics" data-detail="reports"><i class="fa-solid fa-file-lines"></i><span>Reports</span></a>
+
+            <span class="nav-section">Role Workspaces</span>
+            <a href="producer-dashboard.html" class="nav-item"><i class="fa-solid fa-wheat-awn"></i><span>Producer Panel</span></a>
+            <a href="distributor-dashboard.html" class="nav-item"><i class="fa-solid fa-truck-fast"></i><span>Distributor Panel</span></a>
+            <a href="business-dashboard.html" class="nav-item"><i class="fa-solid fa-chart-line"></i><span>Business Panel</span></a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span class="pulse-dot dot-green"></span>
+            <div class="footer-status-text">
+                <strong>Global Admin Control</strong>
+                <small>All organizations visible</small>
+            </div>
+        </div>
+
+        <a href="login.html" id="logout-btn" class="nav-item logout-link">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Logout</span>
+        </a>
+    </aside>
+
+    <div class="main-wrapper">
+        <header class="top-header">
+            <div class="header-title">
+                <h1>Admin Dashboard</h1>
+            </div>
+
+            <div class="header-controls">
+                <span class="live-pill"><span class="pulse-dot dot-green"></span> Live System</span>
+                <span id="current-date">Sept 22, 2026</span>
+                <div class="user-profile-chip">
+                    <span class="user-avatar-initial" id="user-avatar" style="background:linear-gradient(135deg,#f87171,#dc2626);">A</span>
+                    <span class="user-name" id="user-name">Admin</span>
+                    <a href="login.html" class="logout-link-btn" id="header-logout-btn" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+                </div>
+            </div>
+        </header>
+
+
+        <main class="content-container">
+            <section class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon icon-blue"><i class="fa-solid fa-boxes-stacked"></i></div>
+                    <div class="kpi-info">
+                        <label>Total Batches</label>
+                        <div class="kpi-value" id="kpi-total-batches">256</div>
+                        <div class="kpi-sub sub-blue">Tracked</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon icon-cyan"><i class="fa-solid fa-truck-fast"></i></div>
+                    <div class="kpi-info">
+                        <label>Active Shipments</label>
+                        <div class="kpi-value" id="kpi-active-shipments">48</div>
+                        <div class="kpi-sub sub-cyan">In motion</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon icon-purple"><i class="fa-solid fa-link"></i></div>
+                    <div class="kpi-info">
+                        <label>Blockchain TX</label>
+                        <div class="kpi-value" id="kpi-blockchain-tx">1,842</div>
+                        <div class="kpi-sub sub-purple">Ledger</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon icon-green"><i class="fa-solid fa-microchip"></i></div>
+                    <div class="kpi-info">
+                        <label>Sensor Readings</label>
+                        <div class="kpi-value" id="kpi-sensor-readings">12,540</div>
+                        <div class="kpi-sub sub-green">Recorded</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon icon-orange"><i class="fa-solid fa-server"></i></div>
+                    <div class="kpi-info">
+                        <label>System Health</label>
+                        <div class="kpi-value" id="kpi-health">100%</div>
+                        <div class="kpi-sub sub-green">Optimal</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon icon-red"><i class="fa-solid fa-signal"></i></div>
+                    <div class="kpi-info">
+                        <label>Active Devices</label>
+                        <div class="kpi-value" id="kpi-devices">12</div>
+                        <div class="kpi-sub sub-green">Online</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon icon-amber"><i class="fa-solid fa-temperature-high"></i></div>
+                    <div class="kpi-info">
+                        <label>Latest Temp</label>
+                        <div class="kpi-value" id="kpi-temp">24.6°C</div>
+                        <div class="kpi-sub sub-muted">ESP32-01</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon icon-purple"><i class="fa-solid fa-droplet"></i></div>
+                    <div class="kpi-info">
+                        <label>Latest Humidity</label>
+                        <div class="kpi-value" id="kpi-humidity">61%</div>
+                        <div class="kpi-sub sub-muted">ESP32-01</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon icon-red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="kpi-info">
+                        <label>Alerts Today</label>
+                        <div class="kpi-value" id="kpi-alerts">4</div>
+                        <div class="kpi-sub sub-red">Needs attention</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="main-grid">
+                <div class="panel map-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2><i class="fa-solid fa-map-location-dot"></i> Live Supply Chain Route</h2>
+                            <p>Producer â†’ Processing â†’ Transport â†’ Warehouse â†’ Retail</p>
+                        </div>
+                        <span class="pill-live"><span class="pulse-dot dot-green"></span> Live</span>
+                    </div>
+                    <div class="map-container">
+                        <div id="supply-chain-map"></div>
+                    </div>
+                </div>
+
+                <div class="panel sensor-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2><i class="fa-solid fa-tower-broadcast"></i> IoT Sensor Monitor</h2>
+                        </div>
+                        <span class="pill-live"><span class="pulse-dot dot-green"></span> Live</span>
+                    </div>
+
+                    <div class="device-box">
+                        <div class="device-details">
+                            <div class="device-label">Device</div>
+                            <div class="device-name">ESP32-01</div>
+                        </div>
+                        <div class="device-status online">Online</div>
+                    </div>
+
+                    <div class="sensor-metrics">
+                        <div class="sensor-metric">
+                            <span>Temperature</span>
+                            <strong>24.6°C</strong>
+                        </div>
+                        <div class="sensor-metric">
+                            <span>Humidity</span>
+                            <strong>61%</strong>
+                        </div>
+                        <div class="sensor-metric">
+                            <span>GPS</span>
+                            <strong>12.97, 77.59</strong>
+                        </div>
+                        <div class="sensor-metric">
+                            <span>Last Reading</span>
+                            <strong>12:32:10</strong>
+                        </div>
+                    </div>
+
+                    <div class="tiny-chart-wrap">
+                        <canvas id="sensor-history-chart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bottom-grid">
+                <div class="panel ledger-panel" id="blockchain">
+                    <div class="panel-header" style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                        <div>
+                            <h2><i class="fa-solid fa-link"></i> Blockchain Ledger - Recent Transactions</h2>
+                        </div>
+                        <div class="ledger-header-actions" style="display: flex; align-items: center; gap: 10px; margin-left: auto;">
+                            <div class="ledger-indicators" style="display: inline-flex; gap: 8px;">
+                                <button id="btn-ledger-fabric" class="ledger-indicator-btn" type="button"><i class="fa-solid fa-cube"></i> Hyperledger Fabric</button>
+                                <button id="btn-ledger-sha256" class="ledger-indicator-btn" type="button"><i class="fa-solid fa-shield-halved"></i> SHA-256</button>
+                            </div>
+                            <button id="ledger-view-all" class="action-btn" type="button" onclick="openLedgerChooser(); return false;">View</button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="data-table ledger-recent-table">
+                            <thead>
+                                <tr>
+                                    <th>Batch / event</th>
+                                    <th>Ledger proof</th>
+                                    <th>Sensor</th>
+                                    <th>Temperature</th>
+                                    <th>Recorded</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ledger-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="panel alerts-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2><i class="fa-solid fa-bell"></i> Alerts &amp; Notifications</h2>
+                        </div>
+                        <a href="#" class="action-link">View All</a>
+                    </div>
+                    <div class="alerts-list" id="alerts-list"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal-overlay" class="modal-overlay"></div>
+
+    <div id="modal-dashboard" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-gauge-high"></i> Dashboard Overview</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>System-level operational summary across batches, shipments, devices, sensors, and ledger health.</p>
+                <div class="modal-stats-grid">
+                    <div class="mini-stat"><span>Total active batches</span><strong>256</strong></div>
+                    <div class="mini-stat"><span>Verified batches</span><strong>214</strong></div>
+                    <div class="mini-stat"><span>Avg. route delay</span><strong>14 min</strong></div>
+                    <div class="mini-stat"><span>Sensor anomalies</span><strong>3</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-supply-map" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-map-location-dot"></i> Supply Chain Map</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="map-detail-box">
+                    <div class="map-detail-row"><span>Origin</span><strong>Bengaluru</strong></div>
+                    <div class="map-detail-row"><span>Current route</span><strong>Transport / Warehouse / Retail</strong></div>
+                    <div class="map-detail-row"><span>Batch selected</span><strong>FC-201, FC-203</strong></div>
+                    <div class="map-detail-row"><span>Status</span><strong>Active</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-iot-monitor" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-microchip"></i> IoT Sensor Monitor</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <table class="modal-table ledger-detail-table">
+                    <thead>
+                        <tr><th>Device</th><th>Batch</th><th>Temperature</th><th>Humidity</th><th>GPS</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>ESP32-01</td><td>FC-201</td><td>24.6°C</td><td>61%</td><td>12.97, 77.59</td><td><span class="status-ok">Online</span></td></tr>
+                        <tr><td>ESP32-02</td><td>FC-203</td><td>26.8°C</td><td>58%</td><td>13.08, 80.27</td><td><span class="status-warn">Warm</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-ledger" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-link"></i> Blockchain Ledger</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="modal-search">
+                    <input id="ledger-detail-search" type="search" placeholder="Search transaction, Fabric TX, or batch ID">
+                </div>
+                <table class="modal-table">
+                    <thead>
+                        <tr>
+                            <th>Transaction No.</th><th>Transaction (Block Hash)</th><th>Fabric TX ID</th><th>Block Number</th>
+                            <th>Batch ID</th><th>Timestamp</th><th>SHA-256</th>
+                            <th>Previous Hash</th><th>Verification Status</th><th>Ledger Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledger-detail-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-ledger-choice" class="modal">
+            <div class="modal-content ledger-choice-modal">
+                <div class="modal-header">
+                    <div>
+                        <h2><i class="fa-solid fa-list-check"></i> Choose Ledger View</h2>
+                        <p class="modal-subtitle">Select one product or keep every active shipment expanded.</p>
+                    </div>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="ledger-choice-actions">
+                    <button id="ledger-single-choice" class="ledger-choice-card" type="button">
+                        <i class="fa-solid fa-box"></i>
+                        <strong>Single product</strong>
+                        <span>Select one active shipment to view its transactions.</span>
+                    </button>
+                    <button id="ledger-multiple-choice" class="ledger-choice-card" type="button">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                        <strong>Multiple products</strong>
+                        <span>View all active product transactions in sequence.</span>
+                    </button>
+                </div>
+                <div id="ledger-single-form" class="ledger-single-form" hidden>
+                    <label for="ledger-product-id">Active shipment</label>
+                    <div class="ledger-single-input">
+                        <select id="ledger-product-id" aria-label="Select active shipment">
+                            <option value="">Select an active shipment</option>
+                        </select>
+                        <button id="ledger-single-submit" class="admin-report-button" type="button">Show transactions</button>
+                    </div>
+                    <small id="ledger-choice-message"></small>
+                </div>
+            </div>
+        </div>
+
+    <div id="modal-batches" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-box"></i> Products &amp; Batches Registry</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-search"><input type="text" placeholder="Search batch product or producer"></div>
+                <table class="modal-table">
+                    <thead>
+                        <tr><th>Batch</th><th>Product</th><th>Qty</th><th>Producer</th><th>Current stage</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>FC-201</td><td>Tomatoes</td><td>500 kg</td><td>Green Farm Ltd</td><td>Transport</td><td><span class="status-ok">Healthy</span></td></tr>
+                        <tr><td>FC-203</td><td>Milk</td><td>1000 L</td><td>Happy Dairy Co</td><td>Warehouse</td><td><span class="status-warn">Warm</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-users" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-users"></i> Users &amp; Roles</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <table class="modal-table">
+                    <thead>
+                        <tr><th>Organization</th><th>Role</th><th>Access scope</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Farm Co</td><td>Producer</td><td>Batch write</td><td><span class="status-ok">Active</span></td></tr>
+                        <tr><td>LogiFlow</td><td>Distributor</td><td>Transport + warehouse</td><td><span class="status-ok">Active</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-alerts" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-bell"></i> Alerts Center</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert-list-compact">
+                    <div class="alert-item critical"><span>Temperature deviation</span><small>Batch FC-102 â€” 10 min ago</small></div>
+                    <div class="alert-item warning"><span>Shipment delay</span><small>Order #2341 â€” 20 min ago</small></div>
+                    <div class="alert-item info"><span>Sensor calibration</span><small>ESP32-02 â€” 2 hrs ago</small></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-consumer-trace" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-route"></i> Consumer Trace</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="trace-search"><input type="text" placeholder="Search batch ID or QR"></div>
+                <div class="trace-panel">
+                    <div class="trace-row"><span>Batch</span><strong>FC-201</strong></div>
+                    <div class="trace-row"><span>Product</span><strong>Tomatoes</strong></div>
+                    <div class="trace-row"><span>Producer</span><strong>Green Farm Ltd</strong></div>
+                    <div class="trace-row"><span>Distributor</span><strong>LogiFlow</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-qr" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-qrcode"></i> QR Label Generator</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="qr-box" style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px;background:rgba(255,255,255,0.02);border-radius:14px;">
+                    <canvas id="qr-canvas" style="background:#ffffff;padding:12px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></canvas>
+                    <div class="qr-meta" style="text-align:center;">
+                        <strong id="qr-batch-title" style="font-size:16px;color:#f8fafc;">Batch: BATCH-001 (Live ESP32)</strong>
+                        <p id="qr-encoded-link" style="font-size:11px;color:var(--muted);margin-top:6px;">Cryptographic provenance: Hyperledger Fabric Verified</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-analytics" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-chart-bar"></i> Analytics &amp; Reports</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-stats-grid">
+                    <div class="mini-stat"><span>Batch success rate</span><strong>98.2%</strong></div>
+                    <div class="mini-stat"><span>Efficiency trend</span><strong>+5.4%</strong></div>
+                    <div class="mini-stat"><span>Telemetry Uptime</span><strong style="color:#2dd4bf;">99.9%</strong></div>
+                    <div class="mini-stat"><span>Sensor Anomaly Count</span><strong style="color:#2dd4bf;">0 Active</strong></div>
+                </div>
+                <div style="height:220px;margin-top:20px;background:rgba(0,0,0,0.2);padding:14px;border-radius:12px;">
+                    <canvas id="admin-analytics-chart"></canvas>
+                </div>
+                <button class="admin-report-button" id="admin-print-report" type="button"><i class="fa-solid fa-file-pdf"></i> Print factual admin report</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-settings" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-gear"></i> System Settings</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-list">
+                    <div class="setting-row"><span>MQTT Broker</span><strong>Online</strong></div>
+                    <div class="setting-row"><span>Database</span><strong>Healthy</strong></div>
+                    <div class="setting-row"><span>Blockchain node</span><strong>Connected</strong></div>
+                    <div class="setting-row"><span>IoT gateway</span><strong>Connected</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Create User Modal ───────────────────────────────────────────────── -->
+    <div id="modal-create-user" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:460px;width:95%;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1e3a5f,#1a2e4a);border-bottom:1px solid rgba(99,179,237,0.2);">
+                <h2><i class="fa-solid fa-user-plus" style="color:#63b3ed;"></i>&nbsp; Create New User</h2>
+                <button class="modal-close" id="create-user-modal-close">&times;</button>
+            </div>
+            <div class="modal-body" style="padding:24px;">
+                <div id="create-user-feedback" style="display:none;margin-bottom:16px;padding:12px 16px;border-radius:10px;font-size:0.9rem;"></div>
+                <form id="create-user-form" autocomplete="off">
+                    <div style="margin-bottom:16px;">
+                        <label style="display:block;margin-bottom:6px;color:var(--muted,#94a3b8);font-size:0.82rem;text-transform:uppercase;letter-spacing:.05em;">Username</label>
+                        <input id="cu-username" type="text" placeholder="e.g. rvs" maxlength="50" required
+                            style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#f1f5f9;font-size:0.95rem;outline:none;box-sizing:border-box;">
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <label style="display:block;margin-bottom:6px;color:var(--muted,#94a3b8);font-size:0.82rem;text-transform:uppercase;letter-spacing:.05em;">Password</label>
+                        <input id="cu-password" type="password" placeholder="Min 6 characters" minlength="6" required
+                            style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#f1f5f9;font-size:0.95rem;outline:none;box-sizing:border-box;">
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block;margin-bottom:6px;color:var(--muted,#94a3b8);font-size:0.82rem;text-transform:uppercase;letter-spacing:.05em;">Assign Role</label>
+                        <select id="cu-role" required
+                            style="width:100%;padding:10px 14px;background:rgba(15,23,42,0.85);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#f1f5f9;font-size:0.95rem;outline:none;box-sizing:border-box;cursor:pointer;">
+                            <option value="" disabled selected>— Select a role —</option>
+                            <option value="admin">🛡️ Admin</option>
+                            <option value="producer">🌾 Producer</option>
+                            <option value="distributor">🚚 Distributor</option>
+                            <option value="manager">📊 Manager</option>
+                        </select>
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button type="submit" id="cu-submit-btn"
+                            style="flex:1;padding:11px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border:none;border-radius:8px;color:#fff;font-size:0.95rem;font-weight:600;cursor:pointer;transition:opacity .2s;">
+                            <i class="fa-solid fa-user-plus"></i>&nbsp; Create User
+                        </button>
+                        <button type="button" id="cu-cancel-btn"
+                            style="padding:11px 18px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#94a3b8;font-size:0.95rem;cursor:pointer;">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/sidebar-detail-modal.js"></script>
+    <script src="js/admin-dashboard.js"></script>
+</body>
+</html>
