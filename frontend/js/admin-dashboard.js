@@ -309,6 +309,16 @@ async function loadExpandedLedger(batchId) {
 function populateAlerts(list) {
     const container = document.getElementById('alerts-list');
     if (!container) return;
+    if (!Array.isArray(list) || list.length === 0) {
+        container.innerHTML = `
+            <div class="alerts-empty">
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                <strong>All systems clear</strong>
+                <small>No active alerts from the latest sensor and service checks.</small>
+            </div>
+        `;
+        return;
+    }
     container.innerHTML = list.map((alert) => `
         <div class="alert-item ${safeEscape(alert.kind || 'info')}">
             <span>${safeEscape(alert.title)}</span>
@@ -511,8 +521,19 @@ async function loadAdminDashboardData() {
             fetch(FoodChainAPI.resolveApiUrl('/api/kpis')).then(r => r.ok ? r.json() : null).catch(() => null),
             fetch(FoodChainAPI.resolveApiUrl('/api/fabric-status')).then(r => r.ok ? r.json() : null).catch(() => null),
             fetch(FoodChainAPI.resolveApiUrl('/data')).then(r => r.ok ? r.json() : null).catch(() => null),
-            fetch(FoodChainAPI.resolveApiUrl('/alerts')).then(r => r.ok ? r.json() : null).catch(() => null)
+            fetch(FoodChainAPI.resolveApiUrl('/api/agent-alerts')).then(r => r.ok ? r.json() : null).catch(() => null)
         ]);
+
+        const liveAlerts = Array.isArray(alertRes?.alerts) ? alertRes.alerts : [];
+        populateAlerts(liveAlerts.slice(0, 6).map((alert) => ({
+            kind: alert.severity === 'critical' ? 'critical' : alert.severity === 'warning' ? 'warning' : 'info',
+            title: alert.message || alert.title || 'System alert',
+            meta: [
+                alert.batch_id && `Batch ${alert.batch_id}`,
+                alert.source || alert.alert_source,
+                alert.timestamp
+            ].filter(Boolean).join(' · ') || 'Live monitoring'
+        })));
 
         const latestReading = (dataRes && Array.isArray(dataRes.data) && dataRes.data.length > 0)
             ? dataRes.data[dataRes.data.length - 1]
@@ -528,7 +549,7 @@ async function loadAdminDashboardData() {
             devices: new Set(sensorRecords.map(record => record.device_id || record.sensor_id).filter(Boolean)).size,
             temp: latestReading?.temperature != null ? `${latestReading.temperature.toFixed(1)}°C` : '--',
             humidity: latestReading?.humidity != null ? `${latestReading.humidity.toFixed(1)}%` : '--',
-            alerts: adminStats?.security?.failed_events_total ?? 0
+            alerts: liveAlerts.length
         };
 
         populateKpis(kpis);
