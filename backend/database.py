@@ -155,6 +155,7 @@ def row_to_dict(row):
         "product_name": product,
         "product_id": row["product_id"] or batch_id,
         "sensor_id": row["sensor_id"] or "UNKNOWN_SENSOR",
+        "device_id": row["sensor_id"] or "UNKNOWN_SENSOR",
         "current_stage": current_stage,
         "current_stage_label": format_stage_label(current_stage),
         "current_stage_index": SUPPLY_CHAIN_STAGES.index(current_stage),
@@ -211,6 +212,50 @@ def fetch_record_rows(where_clause="", params=(), order_by="sd.id DESC", limit=N
     if limit is not None:
         query += f" LIMIT {int(limit)}"
     return fetch_rows(query, params)
+
+
+def fetch_latest_sensor_row(cursor, batch_id):
+    """Return the newest canonical sensor record associated with a batch."""
+    cursor.execute(
+        """
+        SELECT sd.*
+        FROM sensor_data sd
+        WHERE NULLIF(sd.batch_id, '') = ?
+           OR NULLIF(sd.product_id, '') = ?
+           OR sd.product_ref IN (
+               SELECT id FROM product_registry WHERE batch_id = ?
+           )
+        ORDER BY sd.id DESC
+        LIMIT 1
+        """,
+        (batch_id, batch_id, batch_id),
+    )
+    return cursor.fetchone()
+
+
+def enrich_transfer_with_sensor(transfer, sensor_row):
+    """Add canonical live telemetry and ledger fields to a transfer payload."""
+    result = dict(transfer)
+    if not sensor_row:
+        result.setdefault("latest_iot", None)
+        result.setdefault("device_id", None)
+        return result
+
+    sensor = row_to_dict(sensor_row)
+    result["latest_iot"] = sensor
+    result["device_id"] = sensor["device_id"]
+    result["status"] = result.get("status") or sensor["status"]
+    for field in ("temperature", "humidity", "latitude", "longitude"):
+        if result.get(field) is None:
+            result[field] = sensor[field]
+    result["block_hash"] = result.get("block_hash") or sensor["block_hash"]
+    result["field_hash"] = result.get("field_hash") or sensor["field_hash"]
+    result["fabric_tx_id"] = (
+        result.get("fabric_tx_id")
+        or result.get("blockchain_tx_id")
+        or sensor["fabric_tx_id"]
+    )
+    return result
 
 
 def fetch_latest_batch_rows():
@@ -496,6 +541,11 @@ DEMO_REPLAY_BATCHES = [
 
 
 def get_replay_batch_config(batch_id="FC-001"):
+    """Legacy wrapper — kept for backward compatibility.
+    Tries real DB first, then falls back to DEMO_REPLAY_BATCHES."""
+    real = get_real_batch_meta(batch_id)
+    if real:
+        return real
     for batch in DEMO_REPLAY_BATCHES:
         if batch["batch_id"] == batch_id:
             return batch
@@ -503,6 +553,10 @@ def get_replay_batch_config(batch_id="FC-001"):
 
 
 def get_replay_batch_options():
+    """Legacy wrapper — returns real batches first, demo as fallback."""
+    real = get_active_batch_options()
+    if real:
+        return real
     return [
         {
             "batch_id": batch["batch_id"],
@@ -513,6 +567,108 @@ def get_replay_batch_options():
         }
         for batch in DEMO_REPLAY_BATCHES
     ]
+
+
+def get_real_batch_meta(batch_id):
+    """Get metadata for a real batch from batches table + sensor_data."""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            # Try batches table first
+            cursor.execute(
+                "SELECT batch_id, product_name, origin, destination FROM batches WHERE batch_id = ?",
+                (batch_id,),
+            )
+            row = cursor.fetchone()
+            if row:
+                # Also get device_id from latest sensor_data
+                cursor.execute(
+                    "SELECT sensor_id FROM sensor_data WHERE batch_id = ? ORDER BY id DESC LIMIT 1",
+                    (batch_id,),
+                )
+                sensor_row = cursor.fetchone()
+                return {
+                    "batch_id": row["batch_id"],
+                    "device_id": sensor_row["sensor_id"] if sensor_row else "ESP32-01",
+                    "product": row["product_name"] or "Food Batch",
+                    "origin": row["origin"] or "Origin",
+                    "destination": row["destination"] or "Destination",
+                }
+            # Try sensor_data directly
+            cursor.execute(
+                """SELECT batch_id, sensor_id,
+                          COALESCE(product_name, product) AS product,
+                          origin_name, destination_name
+                   FROM sensor_data WHERE batch_id = ? ORDER BY id DESC LIMIT 1""",
+                (batch_id,),
+            )
+            srow = cursor.fetchone()
+            if srow:
+                return {
+                    "batch_id": srow["batch_id"],
+                    "device_id": srow["sensor_id"] or "ESP32-01",
+                    "product": srow["product"] or "Food Batch",
+                    "origin": srow["origin_name"] or "Origin",
+                    "destination": srow["destination_name"] or "Destination",
+                }
+    except Exception:
+        pass
+    return None
+
+
+def get_active_batch_options():
+    """Get all real batches with sensor data, ordered by most recent activity."""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT
+                    sd.batch_id,
+                    COALESCE(b.product_name, sd.product_name, sd.product, 'Food Batch') AS product,
+                    COALESCE(sd.sensor_id, 'ESP32-01') AS device_id,
+                    COALESCE(b.origin, sd.origin_name, 'Origin') AS origin,
+                    COALESCE(b.destination, sd.destination_name, 'Destination') AS destination,
+                    MAX(sd.id) AS latest_id
+                FROM sensor_data sd
+                LEFT JOIN batches b ON b.batch_id = sd.batch_id
+                WHERE sd.batch_id IS NOT NULL AND sd.batch_id != ''
+                GROUP BY sd.batch_id
+                ORDER BY latest_id DESC
+                LIMIT 20
+                """
+            )
+            rows = cursor.fetchall()
+            return [
+                {
+                    "batch_id": r["batch_id"],
+                    "device_id": r["device_id"],
+                    "product": r["product"],
+                    "origin": r["origin"],
+                    "destination": r["destination"],
+                }
+                for r in rows
+            ]
+    except Exception:
+        return []
+
+
+def get_latest_active_batch():
+    """Return the batch_id of the most recently active batch (latest sensor data)."""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT batch_id FROM sensor_data
+                WHERE batch_id IS NOT NULL AND batch_id != ''
+                ORDER BY id DESC LIMIT 1
+                """
+            )
+            row = cursor.fetchone()
+            return row["batch_id"] if row else None
+    except Exception:
+        return None
 
 
 def replay_row_to_payload(row):
@@ -769,11 +925,13 @@ def seed_default_users():
     """Insert default users if they don't exist."""
     default_users = [
         ("admin",       "admin123",       "admin"),
-        ("farmer",      "farmer123",      "farmer"),
-        ("retailer",    "retail123",      "retailer"),
         ("producer",    "producer123",    "producer"),
         ("distributor", "distributor123", "distributor"),
-        ("distributer", "distributer123", "distributer"),
+        ("consumer",    "consumer123",    "consumer"),
+        # Legacy aliases kept for backward compatibility
+        ("farmer",      "farmer123",      "producer"),
+        ("retailer",    "retail123",      "distributor"),
+        ("distributer", "distributer123", "distributor"),
     ]
     with get_connection() as conn:
         cursor = conn.cursor()
@@ -782,7 +940,7 @@ def seed_default_users():
             if cursor.fetchone() is None:
                 password_hash = pwd_context.hash(password)
                 cursor.execute(
-                    "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+                    "INSERT INTO users (username, password_hash, role, is_active) VALUES (?, ?, ?, 1)",
                     (username, password_hash, role),
                 )
         conn.commit()
@@ -871,8 +1029,78 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
-                role TEXT NOT NULL CHECK(role IN ('admin','farmer','warehouse','retailer','consumer','producer','distributor','distributer')),
+                role TEXT NOT NULL CHECK(role IN (
+                    'admin','producer','distributor','consumer',
+                    'farmer','warehouse','retailer','distributer'
+                )),
+                is_active INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        # ── New RBAC tables ──────────────────────────────────────────────────
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS batches (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                batch_id TEXT UNIQUE NOT NULL,
+                product_name TEXT NOT NULL,
+                product_type TEXT,
+                origin TEXT,
+                destination TEXT,
+                quantity TEXT,
+                description TEXT,
+                harvest_date TEXT,
+                status TEXT NOT NULL DEFAULT 'created',
+                created_by TEXT NOT NULL,
+                created_by_id INTEGER,
+                blockchain_tx_id TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (created_by_id) REFERENCES users(id)
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS batch_transfers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                batch_id TEXT NOT NULL,
+                event_type TEXT NOT NULL CHECK(event_type IN (
+                    'received','transferred','checkpoint','anomaly'
+                )),
+                location_name TEXT,
+                latitude REAL,
+                longitude REAL,
+                temperature REAL,
+                humidity REAL,
+                notes TEXT,
+                anomaly_description TEXT,
+                created_by TEXT NOT NULL,
+                created_by_id INTEGER,
+                blockchain_tx_id TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (created_by_id) REFERENCES users(id)
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                result TEXT NOT NULL,
+                username TEXT,
+                role TEXT,
+                batch_id TEXT,
+                detail TEXT,
+                ip_address TEXT,
+                request_id TEXT
             )
             """
         )
@@ -884,6 +1112,11 @@ def init_db():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_registry_uid ON product_registry(product_uid)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_replay_batch ON replay_telemetry(batch_id, record_id)")
         cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_replay_batch_record ON replay_telemetry(batch_id, record_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_batches_batch_id ON batches(batch_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_batches_created_by ON batches(created_by)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_transfers_batch_id ON batch_transfers(batch_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_logs_ts ON audit_logs(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_logs_event ON audit_logs(event_type)")
 
         ensure_column(cursor, "sensor_data", "product_name", "TEXT")
         ensure_column(cursor, "sensor_data", "batch_id", "TEXT")
@@ -904,9 +1137,10 @@ def init_db():
         ensure_column(cursor, "sensor_data", "replay_record_id", "INTEGER")
         ensure_column(cursor, "sensor_data", "alert_flag", "INTEGER DEFAULT 0")
         ensure_column(cursor, "sensor_data", "alert_source", "TEXT DEFAULT 'sensor'")
+        ensure_column(cursor, "users", "is_active", "INTEGER NOT NULL DEFAULT 1")
 
         migrate_legacy_rows(cursor)
-        seed_demo_replay_dataset(cursor)
+        # seed_demo_replay_dataset(cursor)  -- Disabled for real ESP32 IoT hardware
         conn.commit()
 
     seed_default_users()
