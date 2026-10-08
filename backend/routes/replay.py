@@ -37,7 +37,7 @@ router = APIRouter(prefix="/api/replay", tags=["Replay / Live IoT"])
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def _fetch_sensor_history(batch_id: str, limit: int = 50) -> list[dict]:
-    """Return the most recent `limit` sensor_data records for a batch (newest last)."""
+    """Return the most recent `limit` sensor_readings records for a batch (newest last)."""
     rows = fetch_record_rows(
         where_clause=f"{BATCH_KEY_EXPR} = ?",
         params=(batch_id,),
@@ -58,7 +58,7 @@ def _batch_meta(batch_id: str, demo: bool = False) -> dict:
             cursor.execute(
                 """
                 SELECT sensor_id, product_name, origin_name, destination_name
-                FROM sensor_data
+                FROM sensor_readings
                 WHERE batch_id = ?
                 ORDER BY id DESC LIMIT 1
                 """,

@@ -81,8 +81,8 @@
             inset: 0;
             z-index: 2;
             opacity: 0.3;
-            background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px);
-            background-size: 40px 40px;
+            background: radial-gradient(circle at 30% 30%, rgba(34, 197, 94, 0.12), transparent 45%),
+                        radial-gradient(circle at 75% 70%, rgba(59, 130, 246, 0.1), transparent 42%);
         }
 
         .abstract-nodes svg {
@@ -252,7 +252,7 @@
             background: #22c55e;
             color: #ffffff; border: none; border-radius: 10px;
             font-family: inherit; font-size: 15px; font-weight: 600;
-            cursor: pointer; box-shadow: 0 4px 12px rgba(34,197,94,0.3);
+            cursor: pointer; box-shadow: 0 8px 18px rgba(0,0,0,0.18);
             transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
         }
         .btn-primary:hover { background: #16a34a; transform: translateY(-1px); }
@@ -267,7 +267,7 @@
         }
         .btn-secondary:hover { background: var(--input-bg); border-color: var(--card-border); }
 
-        .role-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 24px; }
+        .role-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 24px; }
         .role-btn {
             padding: 10px 4px; border: 1.5px solid var(--input-border);
             border-radius: 10px; background: var(--input-bg);
@@ -297,7 +297,7 @@
         .scanner-viewport video { width: 100%; height: 100%; object-fit: cover; }
         .scanner-laser {
             position: absolute; left: 20px; right: 20px; top: 20px; height: 2px;
-            background: #22c55e; box-shadow: 0 0 10px #22c55e;
+            background: #22c55e;
             animation: laserScan 1.8s ease-in-out infinite;
         }
         @keyframes laserScan { 0%,100% { transform: translateY(0); } 50% { transform: translateY(115px); } }
@@ -385,50 +385,7 @@
                     <p>Enter your details to access the portal.</p>
                 </div>
 
-                <nav class="auth-tabs">
-                    <button class="tab-btn active" id="tab-consumer" type="button" onclick="switchTab('consumer')">
-                        Consumer Verify
-                    </button>
-                    <button class="tab-btn" id="tab-enterprise" type="button" onclick="switchTab('enterprise')">
-                        Enterprise Portal
-                    </button>
-                </nav>
-
-                <!-- Consumer Verify Panel -->
-                <section class="panel active" id="panel-consumer">
-                    <div class="field-group">
-                        <label class="field-label" for="tracking-id">
-                            Tracking ID
-                            <span>e.g. UID_8930</span>
-                        </label>
-                        <div class="input-wrap">
-                            <i class="fa-solid fa-barcode input-icon"></i>
-                            <input id="tracking-id" class="form-input" type="text" placeholder="Enter Batch ID or Product UID" autocomplete="off">
-                        </div>
-                    </div>
-                    <p class="tip-text">Scan a product QR code or enter the batch ID manually to view its full farm-to-fork journey verified on the blockchain.</p>
-
-                    <button class="btn-primary" type="button" onclick="trackProduct()">
-                        <i class="fa-solid fa-magnifying-glass"></i> Track Journey
-                    </button>
-                    <button class="btn-secondary" type="button" onclick="toggleScanner()">
-                        <i class="fa-solid fa-camera"></i> Scan QR Code
-                    </button>
-
-                    <!-- Interactive QR Camera Viewport -->
-                    <div class="scanner-box" id="scanner-box">
-                        <div class="scanner-viewport">
-                            <video id="scanner-video" muted playsinline></video>
-                            <div class="scanner-laser"></div>
-                        </div>
-                        <p class="scanner-status" id="scanner-status">Camera active. Point at a QR label.</p>
-                    </div>
-
-                    <div class="alert-box" id="consumer-alert"></div>
-                </section>
-
-                <!-- Enterprise Portal Panel -->
-                <section class="panel" id="panel-enterprise">
+                <section class="panel active" id="panel-enterprise">
                     <div class="field-group">
                         <label class="field-label">Staff Role</label>
                         <div class="role-grid">
@@ -438,8 +395,11 @@
                             <button class="role-btn" type="button" onclick="selectRole(this, 'producer')">
                                 <i class="fa-solid fa-seedling"></i> Producer
                             </button>
-                            <button class="role-btn" type="button" onclick="selectRole(this, 'distributer')">
-                                <i class="fa-solid fa-store"></i> Distributer
+                            <button class="role-btn" type="button" onclick="selectRole(this, 'distributor')">
+                                <i class="fa-solid fa-store"></i> Distributor
+                            </button>
+                            <button class="role-btn" type="button" onclick="selectRole(this, 'business')">
+                                <i class="fa-solid fa-chart-line"></i> Business
                             </button>
                         </div>
                     </div>
@@ -484,15 +444,12 @@
         let scannerStream = null;
         let scannerTimer = null;
 
-        function switchTab(tab) {
-            document.getElementById('tab-consumer').classList.toggle('active', tab === 'consumer');
-            document.getElementById('tab-enterprise').classList.toggle('active', tab === 'enterprise');
-            document.getElementById('panel-consumer').classList.toggle('active', tab === 'consumer');
-            document.getElementById('panel-enterprise').classList.toggle('active', tab === 'enterprise');
-            document.getElementById('consumer-alert').style.display = 'none';
-            document.getElementById('enterprise-alert').style.display = 'none';
-
-            if (tab !== 'consumer') stopScanner();
+        const requestedRole = new URLSearchParams(window.location.search).get('role');
+        if (['admin', 'producer', 'distributor', 'business'].includes(requestedRole)) {
+            selectedRole = requestedRole;
+            document.querySelectorAll('.role-btn').forEach((button) => {
+                button.classList.toggle('active', button.getAttribute('onclick')?.includes(`'${requestedRole}'`));
+            });
         }
 
         function selectRole(btn, role) {
@@ -507,19 +464,6 @@
             const icon  = document.getElementById('pw-icon');
             input.type = pwVisible ? 'text' : 'password';
             icon.className = pwVisible ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
-        }
-
-        function trackProduct() {
-            const raw = document.getElementById('tracking-id').value.trim();
-            const alertBox = document.getElementById('consumer-alert');
-            alertBox.style.display = 'none';
-
-            if (!raw) {
-                alertBox.textContent = 'Please enter or scan a batch tracking ID first.';
-                alertBox.className = 'alert-box error';
-                return;
-            }
-            window.location.href = `track.html?id=${encodeURIComponent(raw)}`;
         }
 
         async function handleEnterpriseLogin() {
@@ -550,28 +494,14 @@
                 setSession(data.access_token, data.role || selectedRole, data.username || username);
                 alertBox.textContent = 'Login successful! Redirecting...';
                 alertBox.className = 'alert-box success';
-                setTimeout(() => { window.location.href = 'dashboard.html'; }, 500);
+                setTimeout(() => { redirectByRole(); }, 500);
 
             } catch (err) {
-                // Offline demo fallback (credentials hidden from UI, but still active for prototype testing)
-                const demoUsers = {
-                    admin: { u: 'admin', p: 'admin123', name: 'Raj Vikash' },
-                    producer: { u: 'producer', p: 'producer123', name: 'Producer John' },
-                    distributer: { u: 'distributer', p: 'distributer123', name: 'Distributer John' },
-                    
-                };
-                const match = demoUsers[selectedRole];
-                if ((username === 'admin' && password === 'admin123') || (match && username === match.u && password === match.p)) {
-                    setSession('mock_jwt_token', selectedRole, match ? match.name : 'Staff User');
-                    alertBox.textContent = 'Demo login successful! Redirecting...';
-                    alertBox.className = 'alert-box success';
-                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 500);
-                    return;
-                }
                 alertBox.textContent = err.message || 'Invalid username or password.';
                 alertBox.className = 'alert-box error';
             }
         }
+
 
         /* ?? CAMERA QR SCANNER ?? */
         async function toggleScanner() {
@@ -644,11 +574,7 @@
         /* ?? ENTER KEY SHORTCUT ?? */
         document.addEventListener('keydown', e => {
             if (e.key === 'Enter') {
-                if (document.getElementById('panel-consumer').classList.contains('active')) {
-                    trackProduct();
-                } else {
-                    handleEnterpriseLogin();
-                }
+                handleEnterpriseLogin();
             }
         });
     </script>

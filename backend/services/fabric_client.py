@@ -239,7 +239,7 @@ def get_fabric_status() -> dict:
         "fabric_available": available,
         "mode": "hyperledger-fabric" if available else "hash-chain-only",
         "description": (
-            "Hyperledger Fabric — mychannel | foodchain chaincode"
+            "Hyperledger Fabric — foodchainchannel | foodchain chaincode"
             if available else
             "SHA-256 Hash Chain (Fabric offline — start Docker + run start.bat)"
         ),

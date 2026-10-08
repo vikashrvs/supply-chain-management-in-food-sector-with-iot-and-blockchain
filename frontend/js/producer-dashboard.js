@@ -101,12 +101,10 @@ function initRegistration() {
             await loadProducerData();
             setApiStatus('Producer batch created successfully', 'success');
         } catch (error) {
-            message.textContent = 'Demo mode: backend unavailable, mock batch queued locally.';
-            const fallback = { batch_id: 'DEMO-' + Date.now(), product: fields.product_name || 'Demo Produce', quantity: fields.quantity || '1', status: 'Created', updated: 'now' };
-            const current = [...mockData.batches, fallback];
-            renderBatches(current);
-            updateKpis(current);
-            setApiStatus('Demo mode: ' + (error && error.message ? error.message : 'Backend unavailable'), 'warning');
+            message.textContent = error && error.message
+                ? error.message
+                : 'Backend unavailable. The batch was not created.';
+            setApiStatus('Backend unavailable', 'warning');
         }
     });
 }
@@ -156,28 +154,28 @@ async function loadProducerData() {
 
         const rows = Array.isArray(batches) ? batches : [];
         const alertList = Array.isArray(alerts) ? alerts : (alerts && Array.isArray(alerts.alerts) ? alerts.alerts : []);
-        renderBatches(rows.length ? rows : mockData.batches);
-        updateKpis(rows.length ? rows : mockData.batches);
+        renderBatches(rows);
+        updateKpis(rows);
         renderAlerts(alertList.length ? alertList.map((alert) => ({
             type: alert.severity === 'critical' ? 'critical' : alert.severity === 'warning' ? 'warning' : 'info',
             title: alert.message || alert.title || 'System alert',
             meta: alert.batch_id ? `Batch ${alert.batch_id} · ${alert.timestamp || 'recent'}` : (alert.source || 'System')
-        })) : mockData.alerts);
+        })) : []);
         setApiStatus('Live backend connected', 'success');
     } catch (error) {
-        renderBatches(mockData.batches);
-        updateKpis(mockData.batches);
-        renderAlerts(mockData.alerts);
-        setApiStatus('Demo mode: ' + (error && error.message ? error.message : 'Backend unavailable'), 'warning');
+        renderBatches([]);
+        updateKpis([]);
+        renderAlerts([]);
+        setApiStatus('Backend unavailable', 'warning');
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     FoodChainAPI.initRoleGuard('producer');
     updateDate();
-    renderBatches(mockData.batches);
-    updateKpis(mockData.batches);
-    renderAlerts(mockData.alerts);
+    renderBatches([]);
+    updateKpis([]);
+    renderAlerts([]);
     initMap();
     initModals();
     initRegistration();

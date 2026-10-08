@@ -219,7 +219,7 @@ def fetch_latest_sensor_row(cursor, batch_id):
     cursor.execute(
         """
         SELECT sd.*
-        FROM sensor_data sd
+        FROM sensor_readings sd
         WHERE NULLIF(sd.batch_id, '') = ?
            OR NULLIF(sd.product_id, '') = ?
            OR sd.product_ref IN (
@@ -236,14 +236,35 @@ def fetch_latest_sensor_row(cursor, batch_id):
 def enrich_transfer_with_sensor(transfer, sensor_row):
     """Add canonical live telemetry and ledger fields to a transfer payload."""
     result = dict(transfer)
+    # Keep event proof and sensor proof separate. A transfer row may have no
+    # Fabric transaction even when its linked ESP32 reading is fully verified.
+    result["event_fabric_tx_id"] = result.get("blockchain_tx_id") or None
+    result["event_ledger_status"] = (
+        "Hyperledger Fabric"
+        if result["event_fabric_tx_id"]
+        else "No event proof recorded"
+    )
+    result["event_verification_status"] = (
+        "Verified" if result["event_fabric_tx_id"] else "Not recorded"
+    )
     if not sensor_row:
         result.setdefault("latest_iot", None)
         result.setdefault("device_id", None)
+        result["sensor_fabric_tx_id"] = None
+        result["sensor_block_hash"] = None
+        result["sensor_field_hash"] = None
+        result["sensor_verification_status"] = "Not recorded"
         return result
 
     sensor = row_to_dict(sensor_row)
     result["latest_iot"] = sensor
     result["device_id"] = sensor["device_id"]
+    result["sensor_fabric_tx_id"] = sensor["fabric_tx_id"]
+    result["sensor_block_hash"] = sensor["block_hash"]
+    result["sensor_field_hash"] = sensor["field_hash"]
+    result["sensor_verification_status"] = (
+        "Verified" if sensor["block_hash"] and sensor["field_hash"] else "Pending"
+    )
     result["status"] = result.get("status") or sensor["status"]
     for field in ("temperature", "humidity", "latitude", "longitude"):
         if result.get(field) is None:
@@ -262,7 +283,7 @@ def fetch_latest_batch_rows():
     return fetch_record_rows(
         where_clause=(
             "sd.id IN ("
-            "SELECT MAX(id) FROM sensor_data "
+            "SELECT MAX(id) FROM sensor_readings "
             "GROUP BY COALESCE(NULLIF(batch_id, ''), NULLIF(product_id, ''), CAST(product_ref AS TEXT), "
             "printf('LEGACY_BATCH_%03d', id))"
             ")"
@@ -274,7 +295,7 @@ def fetch_latest_uid_rows():
     return fetch_record_rows(
         where_clause=(
             "sd.id IN ("
-            "SELECT MAX(id) FROM sensor_data "
+            "SELECT MAX(id) FROM sensor_readings "
             "GROUP BY COALESCE(CAST(product_ref AS TEXT), NULLIF(product_uid, ''), NULLIF(batch_id, ''), "
             "NULLIF(product_id, ''), printf('LEGACY_UID_%03d', id))"
             ")"
@@ -366,7 +387,7 @@ def insert_sensor_data(data):
         )
         cursor.execute(
             """
-            INSERT INTO sensor_data (
+            INSERT INTO sensor_readings (
                 timestamp,
                 temperature,
                 humidity,
@@ -386,13 +407,15 @@ def insert_sensor_data(data):
                 product_uid,
                 product,
                 sensor_id,
+                device_id,
                 current_stage,
                 product_ref,
                 block_hash,
+                previous_block_hash,
                 field_hash,
                 fabric_tx_id
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 record["timestamp"],
@@ -414,9 +437,11 @@ def insert_sensor_data(data):
                 record["product_uid"],
                 record["product"],
                 record["sensor_id"],
+                record["sensor_id"],   # device_id mirrors sensor_id
                 record["current_stage"],
                 registry_id,
                 block_hash,
+                prev_hash,             # previous_block_hash — links this record to its predecessor
                 field_hash,
                 None,   # fabric_tx_id starts NULL; async callback fills it in
             ),
@@ -431,7 +456,7 @@ def insert_sensor_data(data):
                 try:
                     with get_connection() as upd_conn:
                         upd_conn.execute(
-                            "UPDATE sensor_data SET fabric_tx_id = ? WHERE id = ?",
+                            "UPDATE sensor_readings SET fabric_tx_id = ? WHERE id = ?",
                             (tx_id, row_id),
                         )
                         upd_conn.commit()
@@ -454,29 +479,6 @@ def should_submit_fabric_event(record):
 
 
 
-def clear_demo_transportation_received(batch_id="FC-001"):
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            DELETE FROM sensor_data
-            WHERE batch_id = ? AND COALESCE(telemetry_mode, '') = 'Demo Telemetry / Replay Mode'
-            """,
-            (batch_id,),
-        )
-        conn.commit()
-
-
-def fetch_replay_records(batch_id="FC-001"):
-    return fetch_rows(
-        """
-        SELECT *
-        FROM replay_telemetry
-        WHERE batch_id = ?
-        ORDER BY record_id ASC
-        """,
-        (batch_id,),
-    )
 
 
 DEMO_REPLAY_BATCHES = [
@@ -570,7 +572,7 @@ def get_replay_batch_options():
 
 
 def get_real_batch_meta(batch_id):
-    """Get metadata for a real batch from batches table + sensor_data."""
+    """Get metadata for a real batch from batches table + sensor_readings."""
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
@@ -581,9 +583,9 @@ def get_real_batch_meta(batch_id):
             )
             row = cursor.fetchone()
             if row:
-                # Also get device_id from latest sensor_data
+                # Also get device_id from latest sensor_readings
                 cursor.execute(
-                    "SELECT sensor_id FROM sensor_data WHERE batch_id = ? ORDER BY id DESC LIMIT 1",
+                    "SELECT sensor_id FROM sensor_readings WHERE batch_id = ? ORDER BY id DESC LIMIT 1",
                     (batch_id,),
                 )
                 sensor_row = cursor.fetchone()
@@ -594,12 +596,12 @@ def get_real_batch_meta(batch_id):
                     "origin": row["origin"] or "Origin",
                     "destination": row["destination"] or "Destination",
                 }
-            # Try sensor_data directly
+            # Try sensor_readings directly
             cursor.execute(
                 """SELECT batch_id, sensor_id,
                           COALESCE(product_name, product) AS product,
                           origin_name, destination_name
-                   FROM sensor_data WHERE batch_id = ? ORDER BY id DESC LIMIT 1""",
+                   FROM sensor_readings WHERE batch_id = ? ORDER BY id DESC LIMIT 1""",
                 (batch_id,),
             )
             srow = cursor.fetchone()
@@ -630,7 +632,7 @@ def get_active_batch_options():
                     COALESCE(b.origin, sd.origin_name, 'Origin') AS origin,
                     COALESCE(b.destination, sd.destination_name, 'Destination') AS destination,
                     MAX(sd.id) AS latest_id
-                FROM sensor_data sd
+                FROM sensor_readings sd
                 LEFT JOIN batches b ON b.batch_id = sd.batch_id
                 WHERE sd.batch_id IS NOT NULL AND sd.batch_id != ''
                 GROUP BY sd.batch_id
@@ -660,7 +662,7 @@ def get_latest_active_batch():
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT batch_id FROM sensor_data
+                SELECT batch_id FROM sensor_readings
                 WHERE batch_id IS NOT NULL AND batch_id != ''
                 ORDER BY id DESC LIMIT 1
                 """
@@ -701,46 +703,6 @@ def replay_row_to_payload(row):
     }
 
 
-def seed_demo_replay_dataset(cursor):
-    expected = len(DEMO_REPLAY_BATCHES) * 100
-    cursor.execute("SELECT COUNT(*) AS count FROM replay_telemetry")
-    if cursor.fetchone()["count"] == expected:
-        return
-
-    cursor.execute("DELETE FROM replay_telemetry")
-    for batch in DEMO_REPLAY_BATCHES:
-        for record in generate_demo_transportation_records(batch):
-            cursor.execute(
-                """
-                INSERT INTO replay_telemetry (
-                    record_id, device_id, batch_id, product_uid, product, timestamp,
-                    temperature, humidity, latitude, longitude, gas_value,
-                    transportation_status, alert_status, origin_name, destination_name,
-                    telemetry_mode, alert_flag, alert_source
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    record["record_id"],
-                    record["device_id"],
-                    record["batch_id"],
-                    record["product_uid"],
-                    record["product"],
-                    record["timestamp"],
-                    record["temperature"],
-                    record["humidity"],
-                    record["latitude"],
-                    record["longitude"],
-                    record["gas_value"],
-                    record["transportation_status"],
-                    record["alert_status"],
-                    record["origin_name"],
-                    record["destination_name"],
-                    record["telemetry_mode"],
-                    record["alert_flag"],
-                    record["alert_source"],
-                ),
-            )
 
 
 def generate_demo_transportation_records(batch):
@@ -806,117 +768,6 @@ def generate_demo_transportation_records(batch):
     return records
 
 
-# ── Migration ────────────────────────────────────────────────────────────────
-
-
-def migrate_legacy_rows(cursor):
-    sensor_columns = get_table_columns(cursor, "sensor_data")
-    uid_expr = (
-        "COALESCE(NULLIF(product_uid, ''), NULLIF(batch_id, ''), NULLIF(product_id, ''), "
-        "printf('UID_%03d', id))"
-        if "product_uid" in sensor_columns
-        else "COALESCE(NULLIF(batch_id, ''), NULLIF(product_id, ''), printf('UID_%03d', id))"
-    )
-
-    cursor.execute(
-        """
-        UPDATE sensor_data
-        SET batch_id = COALESCE(NULLIF(batch_id, ''), NULLIF(product_id, ''), printf('LEGACY_BATCH_%03d', id))
-        WHERE batch_id IS NULL OR TRIM(batch_id) = ''
-        """
-    )
-    cursor.execute(
-        """
-        UPDATE sensor_data
-        SET product = COALESCE(NULLIF(product, ''), NULLIF(product_name, ''), printf('Product %s', batch_id))
-        WHERE product IS NULL OR TRIM(product) = ''
-        """
-    )
-    cursor.execute(
-        """
-        UPDATE sensor_data
-        SET product_name = COALESCE(NULLIF(product_name, ''), product)
-        WHERE product_name IS NULL OR TRIM(product_name) = ''
-        """
-    )
-    cursor.execute(
-        """
-        UPDATE sensor_data
-        SET sensor_id = COALESCE(NULLIF(sensor_id, ''), 'LEGACY_SENSOR')
-        WHERE sensor_id IS NULL OR TRIM(sensor_id) = ''
-        """
-    )
-    cursor.execute(
-        """
-        UPDATE sensor_data
-        SET current_stage = CASE
-            WHEN LOWER(COALESCE(current_stage, '')) IN ('field', 'warehouse', 'transport', 'retailer', 'consumer')
-                THEN LOWER(current_stage)
-            WHEN LOWER(COALESCE(status, '')) = 'delivered'
-                THEN 'consumer'
-            ELSE 'transport'
-        END
-        WHERE current_stage IS NULL OR TRIM(current_stage) = ''
-        """
-    )
-
-    cursor.execute(
-        f"""
-        SELECT
-            id,
-            COALESCE(timestamp, ?) AS created_at,
-            COALESCE(NULLIF(batch_id, ''), NULLIF(product_id, ''), printf('LEGACY_BATCH_%03d', id)) AS batch_id,
-            {uid_expr} AS product_uid,
-            COALESCE(NULLIF(product, ''), NULLIF(product_name, ''), printf('Product %s', COALESCE(NULLIF(batch_id, ''), NULLIF(product_id, ''), printf('LEGACY_BATCH_%03d', id)))) AS product,
-            COALESCE(NULLIF(product_name, ''), NULLIF(product, ''), printf('Product %s', COALESCE(NULLIF(batch_id, ''), NULLIF(product_id, ''), printf('LEGACY_BATCH_%03d', id)))) AS product_name
-        FROM sensor_data
-        WHERE product_ref IS NULL
-        ORDER BY id ASC
-        """,
-        (datetime.now().strftime("%Y-%m-%d %H:%M:%S"),),
-    )
-    rows = cursor.fetchall()
-
-    for row in rows:
-        registry_id = upsert_product_registry(
-            cursor,
-            row["product_uid"],
-            row["batch_id"],
-            row["product"],
-            row["product_name"],
-            row["created_at"],
-        )
-        if "product_uid" in sensor_columns:
-            cursor.execute(
-                """
-                UPDATE sensor_data
-                SET product_ref = ?, batch_id = ?, product = ?, product_name = ?, product_uid = ?
-                WHERE id = ?
-                """,
-                (registry_id, row["batch_id"], row["product"], row["product_name"], row["product_uid"], row["id"]),
-            )
-        else:
-            cursor.execute(
-                """
-                UPDATE sensor_data
-                SET product_ref = ?, batch_id = ?, product = ?, product_name = ?
-                WHERE id = ?
-                """,
-                (registry_id, row["batch_id"], row["product"], row["product_name"], row["id"]),
-            )
-
-    # Populate any missing product_uid in sensor_data from product_registry
-    cursor.execute(
-        """
-        UPDATE sensor_data
-        SET product_uid = (
-            SELECT pr.product_uid
-            FROM product_registry pr
-            WHERE pr.id = sensor_data.product_ref
-        )
-        WHERE (product_uid IS NULL OR TRIM(product_uid) = '') AND product_ref IS NOT NULL
-        """
-    )
 
 
 # ── Seed default users ──────────────────────────────────────────────────────
@@ -953,7 +804,7 @@ def init_db():
         cursor = conn.cursor()
         cursor.execute(
             """
-            CREATE TABLE IF NOT EXISTS sensor_data (
+            CREATE TABLE IF NOT EXISTS sensor_readings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT,
                 temperature REAL,
@@ -970,41 +821,20 @@ def init_db():
                 destination_name TEXT,
                 replay_record_id INTEGER,
                 product_name TEXT,
-                batch_id TEXT,
+                batch_id TEXT NOT NULL,
                 product_uid TEXT,
                 product TEXT,
                 sensor_id TEXT,
+                device_id TEXT,
                 current_stage TEXT,
-                product_ref INTEGER,
-                block_hash TEXT
-            )
-            """
-        )
-        cursor.execute(
-            "DROP TABLE IF EXISTS replay_telemetry"
-        )
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS replay_telemetry (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                record_id INTEGER NOT NULL,
-                device_id TEXT NOT NULL,
-                batch_id TEXT NOT NULL,
-                product_uid TEXT NOT NULL,
-                product TEXT NOT NULL,
-                timestamp TEXT NOT NULL,
-                temperature REAL NOT NULL,
-                humidity REAL NOT NULL,
-                latitude REAL NOT NULL,
-                longitude REAL NOT NULL,
-                gas_value REAL,
-                transportation_status TEXT NOT NULL,
-                alert_status TEXT NOT NULL,
-                origin_name TEXT NOT NULL,
-                destination_name TEXT NOT NULL,
-                telemetry_mode TEXT NOT NULL,
-                alert_flag INTEGER DEFAULT 0,
-                alert_source TEXT DEFAULT 'sensor'
+                product_ref TEXT,
+                block_hash TEXT,
+                previous_block_hash TEXT,
+                field_hash TEXT,
+                fabric_tx_id TEXT,
+                legacy_source_id INTEGER UNIQUE,
+                location TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
@@ -1106,41 +936,18 @@ def init_db():
         )
 
         # Indexes for performance
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_sensor_batch ON sensor_data(batch_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_sensor_product_ref ON sensor_data(product_ref)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_sensor_timestamp ON sensor_data(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_sensor_readings_batch ON sensor_readings(batch_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_sensor_readings_timestamp ON sensor_readings(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_sensor_readings_block_hash ON sensor_readings(block_hash)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_registry_uid ON product_registry(product_uid)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_replay_batch ON replay_telemetry(batch_id, record_id)")
-        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_replay_batch_record ON replay_telemetry(batch_id, record_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_batches_batch_id ON batches(batch_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_batches_created_by ON batches(created_by)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_transfers_batch_id ON batch_transfers(batch_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_logs_ts ON audit_logs(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_logs_event ON audit_logs(event_type)")
 
-        ensure_column(cursor, "sensor_data", "product_name", "TEXT")
-        ensure_column(cursor, "sensor_data", "batch_id", "TEXT")
-        ensure_column(cursor, "sensor_data", "product_uid", "TEXT")
-        ensure_column(cursor, "sensor_data", "product", "TEXT")
-        ensure_column(cursor, "sensor_data", "sensor_id", "TEXT")
-        ensure_column(cursor, "sensor_data", "current_stage", "TEXT")
-        ensure_column(cursor, "sensor_data", "product_ref", "INTEGER")
-        ensure_column(cursor, "sensor_data", "block_hash", "TEXT")
-        ensure_column(cursor, "sensor_data", "fabric_tx_id", "TEXT")
-        ensure_column(cursor, "sensor_data", "field_hash", "TEXT")
-        ensure_column(cursor, "sensor_data", "gas_value", "REAL")
-        ensure_column(cursor, "sensor_data", "transportation_status", "TEXT")
-        ensure_column(cursor, "sensor_data", "alert_status", "TEXT")
-        ensure_column(cursor, "sensor_data", "telemetry_mode", "TEXT")
-        ensure_column(cursor, "sensor_data", "origin_name", "TEXT")
-        ensure_column(cursor, "sensor_data", "destination_name", "TEXT")
-        ensure_column(cursor, "sensor_data", "replay_record_id", "INTEGER")
-        ensure_column(cursor, "sensor_data", "alert_flag", "INTEGER DEFAULT 0")
-        ensure_column(cursor, "sensor_data", "alert_source", "TEXT DEFAULT 'sensor'")
         ensure_column(cursor, "users", "is_active", "INTEGER NOT NULL DEFAULT 1")
 
-        migrate_legacy_rows(cursor)
-        # seed_demo_replay_dataset(cursor)  -- Disabled for real ESP32 IoT hardware
         conn.commit()
 
     seed_default_users()

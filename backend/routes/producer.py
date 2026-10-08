@@ -129,27 +129,26 @@ def list_my_batches(
         if not rows:
             cursor.execute("SELECT * FROM batches ORDER BY id DESC LIMIT ?", (limit,))
             rows = cursor.fetchall()
-
-    result = []
-    for r in rows:
-        device_id, last_reading_at = _iot_meta(cursor, r["batch_id"])
-        result.append(BatchResponse(
-            id=r["id"],
-            batch_id=r["batch_id"],
-            product_name=r["product_name"],
-            product_type=r["product_type"],
-            origin=r["origin"],
-            destination=r["destination"],
-            quantity=r["quantity"],
-            description=r["description"],
-            harvest_date=r["harvest_date"],
-            status=r["status"],
-            created_by=r["created_by"],
-            created_at=r["created_at"] or "",
-            blockchain_tx_id=r["blockchain_tx_id"],
-            device_id=device_id,
-            last_reading_at=last_reading_at,
-        ))
+        result = []
+        for r in rows:
+            device_id, last_reading_at = _iot_meta(cursor, r["batch_id"])
+            result.append(BatchResponse(
+                id=r["id"],
+                batch_id=r["batch_id"],
+                product_name=r["product_name"],
+                product_type=r["product_type"],
+                origin=r["origin"],
+                destination=r["destination"],
+                quantity=r["quantity"],
+                description=r["description"],
+                harvest_date=r["harvest_date"],
+                status=r["status"],
+                created_by=r["created_by"],
+                created_at=r["created_at"] or "",
+                blockchain_tx_id=r["blockchain_tx_id"],
+                device_id=device_id,
+                last_reading_at=last_reading_at,
+            ))
     return result
 
 
@@ -166,13 +165,13 @@ def get_my_batch(
         cursor.execute("SELECT * FROM batches WHERE batch_id = ?", (batch_id,))
         row = cursor.fetchone()
 
-    if not row:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Batch '{batch_id}' not found.",
-        )
+        if not row:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Batch '{batch_id}' not found.",
+            )
 
-    device_id, last_reading_at = _iot_meta(cursor, row["batch_id"])
+        device_id, last_reading_at = _iot_meta(cursor, row["batch_id"])
     return BatchResponse(
         id=row["id"],
         batch_id=row["batch_id"],
@@ -232,7 +231,7 @@ def get_producer_iot_summary(
     if not owned_batches:
         with get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT DISTINCT batch_id FROM sensor_data WHERE batch_id IS NOT NULL AND batch_id != '' ORDER BY id DESC")
+            cursor.execute("SELECT DISTINCT batch_id FROM sensor_readings WHERE batch_id IS NOT NULL AND batch_id != '' ORDER BY id DESC")
             owned_batches = [r["batch_id"] for r in cursor.fetchall()]
 
     summaries = []
@@ -245,7 +244,7 @@ def get_producer_iot_summary(
                        MAX(temperature) AS max_temp, MIN(temperature) AS min_temp,
                        AVG(humidity) AS avg_humidity,
                        SUM(CASE WHEN alert_flag = 1 THEN 1 ELSE 0 END) AS alert_count
-                FROM sensor_data WHERE batch_id = ?
+                FROM sensor_readings WHERE batch_id = ?
                 """,
                 (bid,),
             )

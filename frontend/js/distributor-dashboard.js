@@ -209,19 +209,19 @@ async function loadDistributorData() {
         }));
 
         const alertRows = Array.isArray(alerts) ? alerts : (alerts && Array.isArray(alerts.alerts) ? alerts.alerts : []);
-        populateKpis({ incoming: mappedRows.length || mockData.kpis.incoming, active: mappedRows.length || mockData.kpis.active, delivered: 28, delayed: 3, tempAlerts: alertRows.filter((a) => a.severity === 'critical' || a.severity === 'warning').length || mockData.kpis.tempAlerts, iot: 17 });
-        populateShipments(mappedRows.length ? mappedRows : mockData.shipments);
+        populateKpis({ incoming: mappedRows.length, active: mappedRows.length, delivered: 0, delayed: 0, tempAlerts: alertRows.filter((a) => a.severity === 'critical' || a.severity === 'warning').length, iot: 0 });
+        populateShipments(mappedRows);
         populateAlerts(alertRows.length ? alertRows.slice(0, 4).map((alert) => ({
             level: alert.severity === 'critical' ? 'critical' : alert.severity === 'warning' ? 'warning' : 'info',
             title: alert.message || alert.title || 'System alert',
             meta: alert.batch_id ? `Batch ${alert.batch_id} · ${alert.timestamp || 'recent'}` : (alert.source || 'System')
-        })) : mockData.alerts);
+        })) : []);
         setApiStatus('Live backend connected', 'success');
     } catch (error) {
-        populateKpis(mockData.kpis);
-        populateShipments(mockData.shipments);
-        populateAlerts(mockData.alerts);
-        setApiStatus('Demo mode: ' + (error && error.message ? error.message : 'Backend unavailable'), 'warning');
+        populateKpis({ incoming: 0, active: 0, delivered: 0, delayed: 0, tempAlerts: 0, iot: 0 });
+        populateShipments([]);
+        populateAlerts([]);
+        setApiStatus('Backend unavailable', 'warning');
     } finally {
         loadDistributorData.inFlight = false;
     }
@@ -229,9 +229,9 @@ async function loadDistributorData() {
 
 document.addEventListener('DOMContentLoaded', () => {
     FoodChainAPI.initRoleGuard('distributor');
-    populateKpis(mockData.kpis);
-    populateShipments(mockData.shipments);
-    populateAlerts(mockData.alerts);
+    populateKpis({ incoming: 0, active: 0, delivered: 0, delayed: 0, tempAlerts: 0, iot: 0 });
+    populateShipments([]);
+    populateAlerts([]);
     initMap();
     initModals();
     bindBatchSearch();

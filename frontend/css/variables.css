@@ -77,3 +77,49 @@
   --input-bg: rgba(15, 23, 42, 0.4);
   --input-border: rgba(51, 65, 85, 0.8);
 }
+
+/* ── Premium upgrade tokens (added) ─────────────────────────────────────── */
+:root {
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --shadow-elevated: 0 24px 48px -12px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.2);
+  --glow-live: 0 0 0 3px rgba(34, 197, 94, 0.15), 0 0 16px rgba(34, 197, 94, 0.35);
+  --node-line: rgba(148, 163, 184, 0.06);
+  --gold: #d4af37;
+  --gold-soft: rgba(212, 175, 55, 0.12);
+  --gold-glow: rgba(212, 175, 55, 0.3);
+}
+
+[data-theme="dark"] {
+  /* Subtle circuit/ledger node grid — thematically tied to the blockchain ledger,
+     used once on the page background rather than scattered as decoration */
+  --bg-page: radial-gradient(circle at 15% 10%, rgba(34, 197, 94, 0.05), transparent 45%),
+             radial-gradient(circle at 85% 90%, rgba(59, 130, 246, 0.04), transparent 45%),
+             repeating-linear-gradient(0deg, var(--node-line) 0px, transparent 1px, transparent 48px),
+             repeating-linear-gradient(90deg, var(--node-line) 0px, transparent 1px, transparent 48px),
+             #0b1120;
+}
+
+#api-status-banner {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 2000;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 9px 13px;
+  border: 1px solid rgba(148, 163, 184, .35);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, .94);
+  color: #dbeafe;
+  font: 600 12px/1.35 var(--font-main);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+}
+
+#api-status-banner[data-status="success"] {
+  border-color: rgba(34, 197, 94, .65);
+  color: #bbf7d0;
+}
+
+#api-status-banner[data-status="warning"] {
+  border-color: rgba(245, 158, 11, .7);
+  color: #fde68a;
+}

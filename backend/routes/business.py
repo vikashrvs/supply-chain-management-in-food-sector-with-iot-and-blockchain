@@ -51,7 +51,7 @@ def get_business_overview(
             )
             clean_deliveries = cursor.fetchone()["cnt"]
             efficiency = round((clean_deliveries / delivered) * 100, 1) if delivered else None
-            cursor.execute("SELECT COUNT(DISTINCT sensor_id) AS cnt FROM sensor_data WHERE sensor_id IS NOT NULL AND TRIM(sensor_id) != ''")
+            cursor.execute("SELECT COUNT(DISTINCT sensor_id) AS cnt FROM sensor_readings WHERE sensor_id IS NOT NULL AND TRIM(sensor_id) != ''")
             active_iot_devices = cursor.fetchone()["cnt"]
             cursor.execute(
                 """SELECT COALESCE(NULLIF(product_type, ''), NULLIF(product_name, ''), 'Unclassified') AS label,
@@ -92,7 +92,7 @@ def get_business_overview(
             )
             locations = [dict(row) for row in cursor.fetchall()]
         else:
-            source = "sensor_data"
+            source = "sensor_readings"
             cursor.execute(
                 """WITH latest AS (
                      SELECT sd.*,
@@ -100,7 +100,7 @@ def get_business_overview(
                               PARTITION BY COALESCE(NULLIF(batch_id, ''), product_id)
                               ORDER BY id DESC
                             ) AS row_number
-                   FROM sensor_data sd
+                   FROM sensor_readings sd
                    WHERE COALESCE(NULLIF(batch_id, ''), product_id) IS NOT NULL
                  )
                  SELECT COUNT(*) AS cnt FROM latest WHERE row_number = 1"""
@@ -113,7 +113,7 @@ def get_business_overview(
                               PARTITION BY COALESCE(NULLIF(batch_id, ''), product_id)
                               ORDER BY id DESC
                             ) AS row_number
-                   FROM sensor_data sd
+                   FROM sensor_readings sd
                  )
                  SELECT COUNT(DISTINCT COALESCE(NULLIF(product, ''), NULLIF(product_name, ''), product_id))
                  AS cnt FROM latest WHERE row_number = 1"""
@@ -126,7 +126,7 @@ def get_business_overview(
                               PARTITION BY COALESCE(NULLIF(batch_id, ''), product_id)
                               ORDER BY id DESC
                             ) AS row_number
-                   FROM sensor_data sd
+                   FROM sensor_readings sd
                  )
                  SELECT COUNT(*) AS cnt FROM latest
                  WHERE row_number = 1 AND LOWER(COALESCE(current_stage, '')) != 'consumer'"""
@@ -139,7 +139,7 @@ def get_business_overview(
                               PARTITION BY COALESCE(NULLIF(batch_id, ''), product_id)
                               ORDER BY id DESC
                             ) AS row_number
-                   FROM sensor_data sd
+                   FROM sensor_readings sd
                  )
                  SELECT COUNT(*) AS cnt FROM latest
                  WHERE row_number = 1 AND LOWER(COALESCE(current_stage, '')) = 'transport'"""
@@ -152,7 +152,7 @@ def get_business_overview(
                               PARTITION BY COALESCE(NULLIF(batch_id, ''), product_id)
                               ORDER BY id DESC
                             ) AS row_number
-                   FROM sensor_data sd
+                   FROM sensor_readings sd
                  )
                  SELECT COUNT(*) AS cnt FROM latest
                  WHERE row_number = 1 AND (
@@ -168,7 +168,7 @@ def get_business_overview(
                               PARTITION BY COALESCE(NULLIF(batch_id, ''), product_id)
                               ORDER BY id DESC
                             ) AS row_number
-                   FROM sensor_data sd
+                   FROM sensor_readings sd
                  )
                  SELECT COUNT(*) AS cnt FROM latest
                  WHERE row_number = 1 AND LOWER(COALESCE(current_stage, '')) = 'field'"""
@@ -181,14 +181,14 @@ def get_business_overview(
                               PARTITION BY COALESCE(NULLIF(batch_id, ''), product_id)
                               ORDER BY id DESC
                             ) AS row_number
-                   FROM sensor_data sd
+                   FROM sensor_readings sd
                  )
                  SELECT COUNT(*) AS cnt FROM latest
                  WHERE row_number = 1 AND alert_flag = 1"""
             )
             delayed = cursor.fetchone()["cnt"]
             efficiency = None
-            cursor.execute("SELECT COUNT(DISTINCT sensor_id) AS cnt FROM sensor_data WHERE sensor_id IS NOT NULL AND TRIM(sensor_id) != ''")
+            cursor.execute("SELECT COUNT(DISTINCT sensor_id) AS cnt FROM sensor_readings WHERE sensor_id IS NOT NULL AND TRIM(sensor_id) != ''")
             active_iot_devices = cursor.fetchone()["cnt"]
             cursor.execute(
                 """WITH latest AS (
@@ -197,7 +197,7 @@ def get_business_overview(
                               PARTITION BY COALESCE(NULLIF(batch_id, ''), product_id)
                               ORDER BY id DESC
                             ) AS row_number
-                   FROM sensor_data sd
+                   FROM sensor_readings sd
                  )
                  SELECT COALESCE(NULLIF(product, ''), NULLIF(product_name, ''), product_id, 'Unclassified') AS label,
                         COUNT(*) AS value
@@ -211,7 +211,7 @@ def get_business_overview(
                               PARTITION BY COALESCE(NULLIF(batch_id, ''), product_id)
                               ORDER BY id DESC
                             ) AS row_number
-                   FROM sensor_data sd
+                   FROM sensor_readings sd
                  )
                  SELECT COALESCE(NULLIF(batch_id, ''), product_id) AS batch_id,
                         COALESCE(NULLIF(product_name, ''), NULLIF(product, ''), product_id) AS product_name,
@@ -229,7 +229,7 @@ def get_business_overview(
                               PARTITION BY COALESCE(NULLIF(batch_id, ''), product_id)
                               ORDER BY id DESC
                             ) AS row_number
-                   FROM sensor_data sd
+                   FROM sensor_readings sd
                  )
                  SELECT COALESCE(NULLIF(batch_id, ''), product_id) AS batch_id,
                         latitude, longitude, origin_name AS location_name,
@@ -261,7 +261,7 @@ def get_business_overview(
                 })
         cursor.execute(
             """SELECT temperature, humidity, sensor_id, timestamp
-               FROM sensor_data
+               FROM sensor_readings
                WHERE temperature IS NOT NULL OR humidity IS NOT NULL
                ORDER BY id DESC LIMIT 1"""
         )

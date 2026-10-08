@@ -10,3 +10,17 @@ blockchain/temp_payload.json
 *.zip
 query
 test_demo/
+# Secret credentials — NEVER commit
+.env
+backend/.env
+backend/services/telegram_notifier.py
+
+# Excluded frontend map / service files
+frontend/mappls*
+frontend/**/mappls*
+frontend/js/map-config.js
+frontend/js/map-service.js
+frontend/*service.html
+
+# IDE configuration
+.gemini/

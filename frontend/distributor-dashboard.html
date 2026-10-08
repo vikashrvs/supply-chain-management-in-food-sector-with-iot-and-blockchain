@@ -6,7 +6,7 @@
     <title>FoodChain - Distributor Portal</title>
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/glassmorphism.css">
-    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/distributor-dashboard.css">
     <link rel="stylesheet" href="css/sidebar-detail-modal.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
     
@@ -171,6 +171,8 @@
         @media (max-width: 1200px) { .distributor-kpi-grid { grid-template-columns:repeat(3,minmax(145px,1fr)); } }
         @media (max-width: 900px) { .distributor-kpi-grid { grid-template-columns:repeat(2,minmax(145px,1fr)); } }
         @media (max-width: 700px) { .content-container { padding:18px 12px 30px; } .distribution-flow { flex-direction:column; } .distribution-arrow { transform:rotate(90deg); } .distributor-kpi-grid { grid-template-columns:1fr; } .shipment-row { grid-template-columns:1fr 1fr; } }
+    /* FIX: content must begin immediately after the sidebar grid column. */
+        .main-wrapper { margin-left: 0 !important; }
     </style>
 </head>
 <body>
@@ -529,7 +531,13 @@
                 const res = await fetchWithAuth(distributorApiUrl('/api/distributor/transfers'));
                 if (res.ok) {
                     setDistributorConnection(true);
-                    myTransfers = await res.json();
+                    const payload = await res.json();
+                    // Backend returns an object such as { transfers: [...] }.
+                    // Keep compatibility with a direct array response too.
+                    myTransfers = Array.isArray(payload) ? payload : (
+                        Array.isArray(payload?.transfers) ? payload.transfers :
+                        Array.isArray(payload?.data) ? payload.data : []
+                    );
                     populateTransfersTables();
                     updateStats();
                     const sensorRes = await fetch(distributorApiUrl('/data'));

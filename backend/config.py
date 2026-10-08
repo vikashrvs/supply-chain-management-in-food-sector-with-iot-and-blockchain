@@ -104,6 +104,6 @@ RECORD_SELECT = f"""
         COALESCE(sd.sensor_id, 'UNKNOWN_SENSOR') AS sensor_id,
         {CURRENT_STAGE_EXPR} AS current_stage,
         COALESCE(sd.product_ref, pr.id) AS product_ref
-    FROM sensor_data sd
+    FROM sensor_readings sd
     LEFT JOIN product_registry pr ON pr.id = sd.product_ref
 """

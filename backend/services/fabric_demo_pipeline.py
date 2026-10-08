@@ -106,11 +106,11 @@ def seed_demo_rows(reset: bool = False, limit: int = 50):
     init_db()
     with get_connection() as conn:
         if reset:
-            conn.execute("DELETE FROM sensor_data WHERE batch_id LIKE 'DB-FAB-%'")
+            conn.execute("DELETE FROM sensor_readings WHERE batch_id LIKE 'DB-FAB-%'")
             conn.execute("DELETE FROM product_registry WHERE batch_id LIKE 'DB-FAB-%'")
             conn.commit()
 
-        count = conn.execute("SELECT COUNT(*) FROM sensor_data WHERE batch_id LIKE 'DB-FAB-%'").fetchone()[0]
+        count = conn.execute("SELECT COUNT(*) FROM sensor_readings WHERE batch_id LIKE 'DB-FAB-%'").fetchone()[0]
         if reset or count == 0:
             base = datetime.now() - timedelta(hours=2)
             for batch_cfg in DEMO_BATCHES:
@@ -132,7 +132,7 @@ def seed_demo_rows(reset: bool = False, limit: int = 50):
                     )
                     conn.execute(
                         """
-                        INSERT INTO sensor_data (
+                        INSERT INTO sensor_readings (
                             timestamp,
                             temperature,
                             humidity,
@@ -152,12 +152,14 @@ def seed_demo_rows(reset: bool = False, limit: int = 50):
                             product_uid,
                             product,
                             sensor_id,
+                            device_id,
                             current_stage,
                             product_ref,
                             block_hash,
+                            previous_block_hash,
                             field_hash,
                             fabric_tx_id
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             normalized["timestamp"],
@@ -179,9 +181,11 @@ def seed_demo_rows(reset: bool = False, limit: int = 50):
                             normalized["product_uid"],
                             normalized["product"],
                             normalized["sensor_id"],
+                            normalized["sensor_id"],
                             normalized["current_stage"],
                             registry_id,
                             block_hash,
+                            prev_hash,
                             field_hash,
                             None,
                         ),
@@ -195,7 +199,7 @@ def seed_demo_rows(reset: bool = False, limit: int = 50):
 def _pending_row_count(limit: int = 1000):
     with get_connection() as conn:
         row = conn.execute(
-            "SELECT COUNT(*) FROM sensor_data WHERE batch_id LIKE 'DB-FAB-%' AND (fabric_tx_id IS NULL OR fabric_tx_id = '') LIMIT ?",
+            "SELECT COUNT(*) FROM sensor_readings WHERE batch_id LIKE 'DB-FAB-%' AND (fabric_tx_id IS NULL OR fabric_tx_id = '') LIMIT ?",
             (limit,),
         ).fetchone()
         return int(row[0])
@@ -208,7 +212,7 @@ def register_pending_rows(limit: int = 1000):
         rows = conn.execute(
             """
             SELECT *
-            FROM sensor_data
+            FROM sensor_readings
             WHERE batch_id LIKE 'DB-FAB-%'
               AND (fabric_tx_id IS NULL OR fabric_tx_id = '')
             ORDER BY id ASC
@@ -237,7 +241,7 @@ def register_pending_rows(limit: int = 1000):
         tx_id = submit_to_fabric(row["batch_id"], payload)
         if tx_id:
             with get_connection() as conn:
-                conn.execute("UPDATE sensor_data SET fabric_tx_id = ? WHERE id = ?", (tx_id, row["id"]))
+                conn.execute("UPDATE sensor_readings SET fabric_tx_id = ? WHERE id = ?", (tx_id, row["id"]))
                 conn.commit()
             updated += 1
 

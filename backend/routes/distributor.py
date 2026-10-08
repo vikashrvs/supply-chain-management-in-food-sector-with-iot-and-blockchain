@@ -72,12 +72,12 @@ def lookup_batch(
             for r in cursor.fetchall()
         ]
 
-        # Get demo IoT summary
+        # Get IoT summary from sensor_readings
         cursor.execute(
             """
             SELECT COUNT(*) AS cnt, AVG(temperature) AS avg_temp,
                    SUM(CASE WHEN alert_flag = 1 THEN 1 ELSE 0 END) AS alert_count
-            FROM sensor_data WHERE batch_id = ?
+            FROM sensor_readings WHERE batch_id = ?
             """,
             (batch_id,),
         )
@@ -291,7 +291,7 @@ def get_batch_iot(
     user: dict = Depends(require_role("distributor")),
 ):
     """Get IoT sensor readings for a specific batch. Distributor only."""
-    # Live sensor_data
+    # Live sensor_readings
     sensor_rows = fetch_record_rows(
         where_clause=f"{BATCH_KEY_EXPR} = ?",
         params=(batch_id,),

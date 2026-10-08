@@ -8,7 +8,7 @@ set "PROJECT_DIR=C:\Users\raj vikash\Desktop\food_chain"
 set "WSL_PROJECT_DIR=/mnt/c/Users/raj vikash/Desktop/food_chain"
 set "BACKEND_DIR=%PROJECT_DIR%\backend"
 set "PYTHON=%PROJECT_DIR%\.venv_win\Scripts\python.exe"
-set "LOGIN_URL=http://127.0.0.1:8001/login.html"
+set "HOME_URL=http://127.0.0.1:8001/home.html"
 
 echo.
 echo ============================================================
@@ -115,7 +115,7 @@ REM ============================================================
 echo [4/4] Starting MQTT Broker...
 echo.
 
-start "MQTT Broker" cmd /k "color 0B && title MQTT Broker - FoodChain && echo. && echo [MQTT] FoodChain MQTT Broker && echo. && sc query mosquitto && echo. && echo [MQTT] Broker should be available on port 1883"
+start "MQTT Broker" cmd /k "color 0B && title MQTT Broker - FoodChain && echo. && echo [MQTT] FoodChain MQTT Broker && echo. && sc start mosquitto >nul 2>&1 & sc query mosquitto && echo. && echo [MQTT] Broker is available on port 1883"
 
 timeout /t 2 /nobreak >nul
 
@@ -177,10 +177,10 @@ timeout /t 3 /nobreak >nul
 
 echo.
 echo [OK] FastAPI backend is ready.
-echo [OK] Opening FoodChain login page...
+echo [OK] Opening FoodChain home page...
 echo.
 
-start "" "%LOGIN_URL%"
+start "" "%HOME_URL%"
 
 :FINISH
 
@@ -198,9 +198,10 @@ echo   Orderer            : localhost:7050
 echo.
 echo   MQTT               : port 1883
 echo   FastAPI            : http://127.0.0.1:8001
-echo   Dashboard          : http://127.0.0.1:8001/login.html
+echo   Home                : http://127.0.0.1:8001/home.html
+echo   Login               : http://127.0.0.1:8001/login.html
 echo.
-echo   Demo Telemetry     : Dashboard controlled replay
+echo   Telemetry Mode     : Live ESP32 Hardware IoT (MQTT food/sensor/#)
 echo.
 echo ============================================================
 echo.

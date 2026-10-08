@@ -1,344 +1,1983 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FoodChain — QR Label Generator</title>
-    <meta name="description" content="Generate blockchain-secured QR codes for food batches. Print and attach to shipments for consumer verification.">
-    <link rel="stylesheet" href="css/variables.css">
-    <link rel="stylesheet" href="css/glassmorphism.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>FoodChain — Batch QR &amp; Label</title>
+
+    <meta name="description"
+          content="Create a public Batch QR & Label for consumer food journey verification.">
+
+    <link rel="stylesheet"
+          href="css/variables.css">
+
+    <link rel="stylesheet"
+          href="css/glassmorphism.css">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+          crossorigin="anonymous">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: var(--font-main); color: var(--text-body); min-height: 100vh;
-            background: radial-gradient(ellipse 55% 40% at 90% 10%, rgba(34,197,94,0.12) 0%, transparent 50%),
-                radial-gradient(ellipse 50% 35% at 10% 85%, rgba(59,130,246,0.09) 0%, transparent 50%),
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            color: var(--text-body);
+            min-height: 100vh;
+
+            background:
+                radial-gradient(
+                    ellipse 55% 40% at 90% 10%,
+                    rgba(34,197,94,0.12) 0%,
+                    transparent 50%
+                ),
+                radial-gradient(
+                    ellipse 50% 35% at 10% 85%,
+                    rgba(59,130,246,0.09) 0%,
+                    transparent 50%
+                ),
                 var(--bg-page);
-            transition: background 0.35s ease, color 0.35s ease; }
-        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 68px; background: var(--card-bg); backdrop-filter: blur(20px); border-bottom: 1px solid var(--card-border); }
-        .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-        .brand-icon { width: 52px; height: 52px; background: linear-gradient(135deg, #22c55e, #15803d); border-radius: 12px; display: grid; place-items: center; font-size: 18px; color: #fff; box-shadow: 0 6px 16px rgba(34,197,94,0.3); }
-        .brand-text strong { display: block; font-family: var(--font-heading); font-size: 17px; font-weight: 700; color: var(--text-heading); line-height: 1.1; }
-        .brand-text span { font-size: 11px; color: var(--text-muted); }
-        .nav-links { display: flex; align-items: center; gap: 8px; }
-        .nav-link { padding: 7px 14px; border-radius: 9px; text-decoration: none; font-size: 14px; font-weight: 500; color: var(--text-muted); transition: all 0.2s ease; }
-        .nav-link:hover { color: var(--text-heading); background: rgba(34,197,94,0.08); }
-        .nav-link.active { color: #16a34a; font-weight: 600; }
-        [data-theme="light"] .nav-link.active { color: #4ade80; }
-        .nav-theme-btn { width: 38px; height: 38px; border-radius: 9px; border: 1px solid var(--card-border); background: var(--card-bg); cursor: pointer; display: grid; place-items: center; font-size: 16px; color: var(--text-muted); transition: all 0.2s ease; }
-        .nav-theme-btn:hover { border-color: rgba(34,197,94,0.4); }
-        .page-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; max-width: 1100px; margin: 0 auto; padding: 108px 24px 80px; animation: fadeSlide 0.6s ease-out forwards; }
-        @keyframes fadeSlide { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @media (max-width: 780px) { .page-layout { grid-template-columns: 1fr; padding: 98px 16px 60px; } }
-        .col-left, .col-right { display: flex; flex-direction: column; gap: 24px; }
-        .page-hero { grid-column: 1 / -1; text-align: center; margin-bottom: 12px; }
-        .page-hero .tag { display: inline-flex; align-items: center; gap: 7px; padding: 5px 16px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); border-radius: 999px; font-size: 12px; font-weight: 600; color: #16a34a; margin-bottom: 18px; }
-        [data-theme="light"] .page-hero .tag { color: #4ade80; }
-        .page-hero h1 { font-family: var(--font-heading); font-size: clamp(26px, 4vw, 40px); font-weight: 800; color: var(--text-heading); letter-spacing: -0.5px; margin-bottom: 12px; }
-        .page-hero p { font-size: 16px; color: var(--text-muted); max-width: 520px; margin: 0 auto; line-height: 1.65; }
-        .form-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--card-border); border-radius: 22px; padding: 32px 28px; box-shadow: var(--card-shadow); }
-        .card-heading { font-family: var(--font-heading); font-size: 17px; font-weight: 700; color: var(--text-heading); margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
-        .card-heading i { color: #22c55e; }
-        .form-group { margin-bottom: 18px; }
-        .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-heading); margin-bottom: 8px; }
-        .form-label span { font-size: 12px; color: var(--text-muted); font-weight: 400; margin-left: 6px; }
-        .form-input, .form-select { width: 100%; height: 48px; padding: 0 16px; background: var(--input-bg); border: 1.5px solid var(--input-border); border-radius: 12px; font-size: 14px; color: var(--text-heading); font-family: var(--font-main); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-        .form-input:focus, .form-select:focus { border-color: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,0.12); }
-        .form-input::placeholder { color: var(--text-muted); }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-        .gen-btn { width: 100%; height: 52px; background: linear-gradient(135deg, #22c55e, #15803d); color: #fff; border: none; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px; }
-        .gen-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(34,197,94,0.4); }
-        .batch-list-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--card-border); border-radius: 22px; padding: 28px 24px; box-shadow: var(--card-shadow); }
-        .batch-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--card-border); cursor: pointer; transition: all 0.2s; border-radius: 8px; }
-        .batch-item:last-child { border-bottom: none; }
-        .batch-item:hover { padding-left: 8px; }
-        .batch-item-info { flex: 1; }
-        .batch-item-id { font-size: 14px; font-weight: 700; color: var(--text-heading); font-family: monospace; }
-        .batch-item-meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
-        .batch-item-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
-        .qr-preview-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--card-border); border-radius: 22px; padding: 36px 28px; box-shadow: var(--card-shadow); display: flex; flex-direction: column; align-items: center; gap: 20px; position: sticky; top: 96px; }
-        .qr-placeholder { width: 220px; height: 220px; border-radius: 16px; border: 2px dashed var(--card-border); display: grid; place-items: center; }
-        .qr-placeholder-icon { font-size: 48px; opacity: 0.3; }
-        #qr-container { display: none; }
-        #qr-container canvas, #qr-container img { border-radius: 12px; }
-        .qr-meta { width: 100%; }
-        .qr-meta-title { font-family: var(--font-heading); font-size: 18px; font-weight: 700; color: var(--text-heading); text-align: center; margin-bottom: 4px; }
-        .qr-meta-sub { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 16px; }
-        .qr-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .qr-detail { background: var(--bg-page); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px 14px; }
-        .qd-label { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
-        .qd-value { font-size: 13px; font-weight: 600; color: var(--text-heading); }
-        .action-row { display: flex; gap: 12px; width: 100%; }
-        .btn-download { flex: 1; height: 46px; background: linear-gradient(135deg, #22c55e, #15803d); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-download:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(34,197,94,0.35); }
-        .btn-print { flex: 1; height: 46px; background: var(--bg-page); border: 1.5px solid var(--card-border); color: var(--text-heading); border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-print:hover { border-color: rgba(34,197,94,0.4); }
-        .no-qr-msg { color: var(--text-muted); font-size: 13px; text-align: center; }
-        @media print {
-            nav, .col-left, .page-hero { display: none; }
-            .page-layout { display: block; }
-            .qr-preview-card { border: none; box-shadow: none; position: static; }
-        }
-    </style>
-</head>
-<body>
-    <nav>
-        <a href="home.html" class="nav-brand">
-            <div class="brand-icon" style="background:transparent; box-shadow:none;">
-                <img src="images/logo.png" alt="FoodChain Logo" style="width:100%;height:100%;object-fit:contain;">
-            </div>
-            <div class="brand-text">
-                <strong>FoodChain</strong>
-                <span>Food Supply Chain</span>
-            </div>
-        </a>
-        <div class="nav-links">
-            <a href="home.html" class="nav-link">Home</a>
-            <a href="dashboard.html" class="nav-link">Dashboard</a>
-            <a href="track.html" class="nav-link">Track</a>
-            <a href="qr.html" class="nav-link active">QR</a>
-            <button class="nav-theme-btn" onclick="toggleTheme()" title="Toggle Theme">
-                <span id="theme-icon">🌙</span>
-            </button>
-        </div>
-    </nav>
 
-    <div class="page-layout">
-        <div class="page-hero">
-            <div class="tag">
-                <i class="fa-solid fa-qrcode" style="color:#22c55e;font-size:11px;"></i>
-                Blockchain-Linked QR Labels
-            </div>
-            <h1>QR Label Generator</h1>
-            <p>Generate QR codes that link directly to the blockchain-verified supply chain record for each product batch.</p>
-        </div>
-
-        <div class="col-left">
-            <div class="form-card">
-                <div class="card-heading">
-                    <i class="fa-solid fa-plus-circle"></i>
-                    Generate New QR Label
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="input-batch">Batch ID <span>from your records</span></label>
-                    <input type="text" id="input-batch" class="form-input" placeholder="e.g. BATCH-TOM-2026-042">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="input-product">Product Name</label>
-                    <input type="text" id="input-product" class="form-input" placeholder="e.g. Fresh Organic Tomatoes">
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label" for="input-stage">Current Stage</label>
-                        <select id="input-stage" class="form-select">
-                            <option value="field">🌾 Field / Farm</option>
-                            <option value="warehouse">🏭 Warehouse</option>
-                            <option value="transport" selected>🚛 Transport</option>
-                            <option value="retailer">🏪 Retailer</option>
-                            <option value="consumer">🛒 Consumer</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="input-temp">Temperature (°C)</label>
-                        <input type="number" id="input-temp" class="form-input" placeholder="e.g. 8.5" step="0.1">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="input-sensor">Sensor Node ID <span>optional</span></label>
-                    <input type="text" id="input-sensor" class="form-input" placeholder="e.g. ESP32-A1">
-                </div>
-
-                <button class="gen-btn" onclick="generateQR()">
-                    <i class="fa-solid fa-qrcode"></i>
-                    Generate QR Code
-                </button>
-            </div>
-
-            <div class="batch-list-card">
-                <div class="card-heading">
-                    <i class="fa-solid fa-boxes-packing" style="color:#3b82f6;"></i>
-                    Fetch Live Batches
-                </div>
-                <div id="batch-list">
-                    <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">
-                        <i class="fa-solid fa-circle-notch fa-spin" style="margin-bottom:8px;display:block;font-size:22px;color:#22c55e;"></i>
-                        Loading batches from API...
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-right">
-            <div class="qr-preview-card">
-                <div id="qr-placeholder" class="qr-placeholder">
-                    <div style="text-align:center;">
-                        <div class="qr-placeholder-icon">🏷️</div>
-                        <div style="font-size:13px;color:var(--text-muted);margin-top:8px;">QR code appears here</div>
-                    </div>
-                </div>
-
-                <div id="qr-container"></div>
-
-                <div class="qr-meta" id="qr-meta" style="display:none;">
-                    <div class="qr-meta-title" id="qr-batch-label">—</div>
-                    <div class="qr-meta-sub" id="qr-product-label">—</div>
-                    <div class="qr-details">
-                        <div class="qr-detail">
-                            <div class="qd-label">Stage</div>
-                            <div class="qd-value" id="qd-stage">—</div>
-                        </div>
-                        <div class="qr-detail">
-                            <div class="qd-label">Temperature</div>
-                            <div class="qd-value" id="qd-temp">—</div>
-                        </div>
-                        <div class="qr-detail">
-                            <div class="qd-label">Sensor</div>
-                            <div class="qd-value" id="qd-sensor">—</div>
-                        </div>
-                        <div class="qr-detail">
-                            <div class="qd-label">Generated</div>
-                            <div class="qd-value" id="qd-time">—</div>
-                        </div>
-                    </div>
-                    <div class="action-row">
-                        <button class="btn-download" onclick="downloadQR()">
-                            <i class="fa-solid fa-download"></i> Download PNG
-                        </button>
-                        <button class="btn-print" onclick="window.print()">
-                            <i class="fa-solid fa-print"></i> Print
-                        </button>
-                    </div>
-                </div>
-
-                <div id="no-qr-info" class="no-qr-msg">
-                    Fill in the form and click <strong>Generate QR Code</strong> to create a blockchain-linked label for this batch.
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const html = document.documentElement;
-        const themeIcon = document.getElementById('theme-icon');
-        function applyTheme(t) { html.setAttribute('data-theme', t); themeIcon.textContent = t === 'dark' ? '☀️' : '🌙'; localStorage.setItem('ag-theme', t); }
-        function toggleTheme() { applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
-        applyTheme(localStorage.getItem('ag-theme') || 'dark');
-
-        const stageLabels = {field:'Field / Farm',warehouse:'Warehouse',transport:'In Transit',retailer:'Retailer',consumer:'Consumer'};
-        const stagePillClass = {field:'pill-green',warehouse:'pill-blue',transport:'pill-amber',retailer:'pill-green',consumer:'pill-green'};
-
-        function escHtml(v) { return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-        let currentQRUrl = '';
-
-        function generateQR() {
-            const batchId = document.getElementById('input-batch').value.trim();
-            const product = document.getElementById('input-product').value.trim();
-            const stage   = document.getElementById('input-stage').value;
-            const temp    = document.getElementById('input-temp').value;
-            const sensor  = document.getElementById('input-sensor').value.trim();
-
-            if (!batchId) { document.getElementById('input-batch').focus(); return; }
-
-            const trackUrl = window.location.origin + '/track.html?id=' + encodeURIComponent(batchId);
-            currentQRUrl = trackUrl;
-
-            const container = document.getElementById('qr-container');
-            container.innerHTML = '';
-            new QRCode(container, {
-                text: trackUrl,
-                width: 220,
-                height: 220,
-                colorDark: html.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#0f172a',
-                colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.H
-            });
-
-            document.getElementById('qr-placeholder').style.display = 'none';
-            container.style.display = 'block';
-
-            document.getElementById('qr-batch-label').textContent = batchId;
-            document.getElementById('qr-product-label').textContent = product || 'Food Product';
-            document.getElementById('qd-stage').textContent = stageLabels[stage] || stage;
-            document.getElementById('qd-temp').textContent = temp ? temp + '°C' : '—';
-            document.getElementById('qd-sensor').textContent = sensor || 'ESP32';
-            document.getElementById('qd-time').textContent = new Date().toLocaleTimeString();
-
-            document.getElementById('qr-meta').style.display = 'block';
-            document.getElementById('no-qr-info').style.display = 'none';
+            transition:
+                background 0.35s ease,
+                color 0.35s ease;
         }
 
-        function downloadQR() {
-            const canvas = document.querySelector('#qr-container canvas');
-            if (!canvas) return;
-            const link = document.createElement('a');
-            link.download = (document.getElementById('input-batch').value.trim() || 'qr-label') + '.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 200;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 0 32px;
+            height: 68px;
+
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+
+            border-bottom:
+                1px solid var(--card-border);
         }
 
-        function fillFormFromBatch(b) {
-            document.getElementById('input-batch').value = b.batch_id || '';
-            document.getElementById('input-product').value = b.product_name || b.product || '';
-            const stageEl = document.getElementById('input-stage');
-            if (b.current_stage) stageEl.value = b.current_stage;
-            document.getElementById('input-temp').value = b.temperature != null ? b.temperature.toFixed(1) : '';
-            document.getElementById('input-sensor').value = b.sensor_id || '';
-            generateQR();
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
         }
 
-        async function loadBatches() {
-            const listEl = document.getElementById('batch-list');
-            try {
-                const token = localStorage.getItem('auth_token');
-                const headers = token ? { Authorization: 'Bearer ' + token } : {};
-                const res = await fetch('/api/batches', { credentials: 'include', headers });
-                if (!res.ok) throw new Error('no data');
-                const d = await res.json();
-                const batches = (d.batches || []).slice(0, 8);
-                if (!batches.length) throw new Error('empty');
-                listEl.innerHTML = batches.map(b => {
-                    const riskCls = b.risk_level === 'stable' ? 'pill-green' : b.risk_level === 'warning' ? 'pill-amber' : 'pill-red';
-                    const riskTxt = b.risk_level === 'stable' ? 'Compliant' : b.risk_level === 'warning' ? 'Warning' : 'Hold';
-                    return `<div class="batch-item" onclick='fillFormFromBatch(${JSON.stringify(b)})'>
-                        <div class="batch-item-info">
-                            <div class="batch-item-id">${escHtml(b.batch_id)}</div>
-                            <div class="batch-item-meta">${escHtml(b.product_name||b.product||'—')} &bull; ${escHtml(b.current_stage_label||b.current_stage||'—')}</div>
-                        </div>
-                        <span class="batch-item-pill glass-pill ${riskCls}">${riskTxt}</span>
-                    </div>`;
-                }).join('');
-            } catch(e) {
-                // Demo batches
-                const demos = [
-                    {batch_id:'BATCH-TOM-2026-001', product_name:'Fresh Tomatoes', current_stage:'retailer', current_stage_label:'Retailer', temperature:8.2, risk_level:'stable', sensor_id:'ESP32-A1'},
-                    {batch_id:'BATCH-MLK-2026-004', product_name:'Organic Milk', current_stage:'transport', current_stage_label:'In Transit', temperature:4.1, risk_level:'stable', sensor_id:'ESP32-B2'},
-                    {batch_id:'BATCH-WHT-2026-012', product_name:'Premium Wheat', current_stage:'warehouse', current_stage_label:'Warehouse', temperature:22.5, risk_level:'warning', sensor_id:'ESP32-C3'},
-                    {batch_id:'BATCH-RCE-2026-007', product_name:'Basmati Rice', current_stage:'field', current_stage_label:'Field', temperature:28.0, risk_level:'stable', sensor_id:'ESP32-D4'},
-                ];
-                listEl.innerHTML = demos.map(b => {
-                    const riskCls = b.risk_level === 'stable' ? 'pill-green' : 'pill-amber';
-                    const riskTxt = b.risk_level === 'stable' ? 'Compliant' : 'Warning';
-                    return `<div class="batch-item" onclick='fillFormFromBatch(${JSON.stringify(b)})'>
-                        <div class="batch-item-info">
-                            <div class="batch-item-id">${escHtml(b.batch_id)}</div>
-                            <div class="batch-item-meta">${escHtml(b.product_name)} &bull; ${escHtml(b.current_stage_label)}</div>
-                        </div>
-                        <span class="batch-item-pill glass-pill ${riskCls}">${riskTxt}</span>
-                    </div>`;
-                }).join('') + '<div style="font-size:11px;color:var(--text-muted);padding:12px 4px 0;">Demo data shown — login to see live batches</div>';
+        .brand-icon {
+            width: 52px;
+            height: 52px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #22c55e,
+                    #15803d
+                );
+
+            border-radius: 12px;
+
+            display: grid;
+            place-items: center;
+
+            font-size: 18px;
+            color: #fff;
+
+            box-shadow:
+                0 6px 16px rgba(34,197,94,0.3);
+        }
+
+        .brand-text strong {
+            display: block;
+
+            font-family:
+                var(--font-heading);
+
+            font-size: 17px;
+            font-weight: 700;
+
+            color:
+                var(--text-heading);
+
+            line-height: 1.1;
+        }
+
+        .brand-text span {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-link {
+            padding: 7px 14px;
+            border-radius: 9px;
+
+            text-decoration: none;
+
+            font-size: 14px;
+            font-weight: 500;
+
+            color: var(--text-muted);
+
+            transition:
+                all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--text-heading);
+            background:
+                rgba(34,197,94,0.08);
+        }
+
+        .nav-link.active {
+            color: #16a34a;
+            font-weight: 600;
+        }
+
+        [data-theme="light"]
+        .nav-link.active {
+            color: #4ade80;
+        }
+
+        .nav-theme-btn {
+            width: 38px;
+            height: 38px;
+
+            border-radius: 9px;
+            border:
+                1px solid var(--card-border);
+
+            background:
+                var(--card-bg);
+
+            cursor: pointer;
+
+            display: grid;
+            place-items: center;
+
+            font-size: 16px;
+            color: var(--text-muted);
+        }
+
+        .page-layout {
+            display: grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap: 28px;
+
+            max-width: 1100px;
+
+            margin: 0 auto;
+
+            padding:
+                108px 24px 80px;
+        }
+
+        @media (max-width: 780px) {
+
+            .page-layout {
+                grid-template-columns: 1fr;
+                padding:
+                    98px 16px 60px;
             }
         }
 
-        document.getElementById('input-batch').addEventListener('keydown', e => { if (e.key === 'Enter') generateQR(); });
-        loadBatches();
-    </script>
+        .col-left,
+        .col-right {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .page-hero {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .page-hero .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+
+            padding: 5px 16px;
+
+            background:
+                rgba(34,197,94,0.1);
+
+            border:
+                1px solid rgba(34,197,94,0.25);
+
+            border-radius: 999px;
+
+            font-size: 12px;
+            font-weight: 600;
+
+            color: #16a34a;
+
+            margin-bottom: 18px;
+        }
+
+        [data-theme="light"]
+        .page-hero .tag {
+            color: #4ade80;
+        }
+
+        .page-hero h1 {
+            font-family:
+                var(--font-heading);
+
+            font-size:
+                clamp(26px, 4vw, 40px);
+
+            font-weight: 800;
+
+            color:
+                var(--text-heading);
+
+            letter-spacing:
+                -0.5px;
+
+            margin-bottom: 12px;
+        }
+
+        .page-hero p {
+            font-size: 16px;
+            color: var(--text-muted);
+
+            max-width: 520px;
+
+            margin: 0 auto;
+
+            line-height: 1.65;
+        }
+
+        .form-card,
+        .batch-list-card,
+        .qr-preview-card {
+
+            background:
+                var(--card-bg);
+
+            backdrop-filter:
+                blur(20px);
+
+            border:
+                1px solid var(--card-border);
+
+            border-radius: 22px;
+
+            box-shadow:
+                var(--card-shadow);
+        }
+
+        .form-card {
+            padding: 32px 28px;
+        }
+
+        .card-heading {
+            font-family:
+                var(--font-heading);
+
+            font-size: 17px;
+            font-weight: 700;
+
+            color:
+                var(--text-heading);
+
+            margin-bottom: 24px;
+
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-heading i {
+            color: #22c55e;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-label {
+            display: block;
+
+            font-size: 13px;
+            font-weight: 600;
+
+            color:
+                var(--text-heading);
+
+            margin-bottom: 8px;
+        }
+
+        .form-label span {
+            font-size: 12px;
+            color: var(--text-muted);
+
+            font-weight: 400;
+
+            margin-left: 6px;
+        }
+
+        .form-input,
+        .form-select {
+
+            width: 100%;
+            height: 48px;
+
+            padding:
+                0 16px;
+
+            background:
+                var(--input-bg);
+
+            border:
+                1.5px solid var(--input-border);
+
+            border-radius: 12px;
+
+            font-size: 14px;
+
+            color:
+                var(--text-heading);
+
+            font-family:
+                var(--font-main);
+
+            outline: none;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+
+            border-color:
+                #22c55e;
+
+            box-shadow:
+                0 0 0 4px
+                rgba(34,197,94,0.12);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-row {
+            display: grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap: 14px;
+        }
+
+        .gen-btn {
+
+            width: 100%;
+            height: 52px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #22c55e,
+                    #15803d
+                );
+
+            color: #fff;
+
+            border: none;
+            border-radius: 14px;
+
+            font-size: 15px;
+            font-weight: 700;
+
+            cursor: pointer;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            gap: 10px;
+
+            margin-top: 8px;
+        }
+
+        .gen-btn:hover {
+            transform:
+                translateY(-2px);
+
+            box-shadow:
+                0 10px 28px
+                rgba(34,197,94,0.4);
+        }
+
+        .batch-list-card {
+            padding: 28px 24px;
+        }
+
+        .batch-item {
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 12px;
+
+            padding: 14px 0;
+
+            border-bottom:
+                1px solid var(--card-border);
+
+            cursor: pointer;
+
+            transition:
+                all 0.2s;
+        }
+
+        .batch-item:last-child {
+            border-bottom: none;
+        }
+
+        .batch-item:hover {
+            padding-left: 8px;
+        }
+
+        .batch-item-info {
+            flex: 1;
+        }
+
+        .batch-item-id {
+
+            font-size: 14px;
+            font-weight: 700;
+
+            color:
+                var(--text-heading);
+
+            font-family:
+                monospace;
+        }
+
+        .batch-item-meta {
+
+            font-size: 12px;
+            color: var(--text-muted);
+
+            margin-top: 3px;
+        }
+
+        .batch-item-pill {
+
+            display: inline-flex;
+            align-items: center;
+
+            padding:
+                4px 10px;
+
+            border-radius: 999px;
+
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .qr-preview-card {
+
+            padding: 36px 28px;
+
+            display: flex;
+            flex-direction: column;
+
+            align-items: center;
+
+            gap: 20px;
+
+            position: sticky;
+            top: 96px;
+        }
+
+        .qr-placeholder {
+
+            width: 220px;
+            height: 220px;
+
+            border-radius: 16px;
+
+            border:
+                2px dashed var(--card-border);
+
+            display: grid;
+            place-items: center;
+        }
+
+        .qr-placeholder-icon {
+            font-size: 48px;
+            opacity: 0.3;
+        }
+
+        #qr-container {
+            display: none;
+        }
+
+        #qr-container canvas,
+        #qr-container img {
+            border-radius: 12px;
+        }
+
+        .qr-meta {
+            width: 100%;
+        }
+
+        .qr-meta-title {
+
+            font-family:
+                var(--font-heading);
+
+            font-size: 18px;
+            font-weight: 700;
+
+            color:
+                var(--text-heading);
+
+            text-align: center;
+
+            margin-bottom: 4px;
+        }
+
+        .qr-meta-sub {
+
+            font-size: 13px;
+            color: var(--text-muted);
+
+            text-align: center;
+
+            margin-bottom: 16px;
+        }
+
+        .qr-details {
+
+            display: grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap: 10px;
+
+            margin-bottom: 20px;
+        }
+
+        .qr-detail {
+
+            background:
+                var(--bg-page);
+
+            border:
+                1px solid var(--card-border);
+
+            border-radius: 12px;
+
+            padding: 12px 14px;
+        }
+
+        .qd-label {
+
+            font-size: 11px;
+            font-weight: 700;
+
+            letter-spacing:
+                0.5px;
+
+            text-transform:
+                uppercase;
+
+            color:
+                var(--text-muted);
+
+            margin-bottom: 4px;
+        }
+
+        .qd-value {
+
+            font-size: 13px;
+            font-weight: 600;
+
+            color:
+                var(--text-heading);
+        }
+
+        .action-row {
+
+            display: flex;
+
+            gap: 12px;
+
+            width: 100%;
+        }
+
+        .btn-download,
+        .btn-print {
+
+            flex: 1;
+
+            height: 46px;
+
+            border-radius: 12px;
+
+            font-size: 14px;
+            font-weight: 700;
+
+            cursor: pointer;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            gap: 8px;
+        }
+
+        .btn-download {
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #22c55e,
+                    #15803d
+                );
+
+            color: #fff;
+
+            border: none;
+        }
+
+        .btn-download:hover {
+
+            transform:
+                translateY(-2px);
+
+            box-shadow:
+                0 8px 20px
+                rgba(34,197,94,0.35);
+        }
+
+        .btn-print {
+
+            background:
+                var(--bg-page);
+
+            border:
+                1.5px solid var(--card-border);
+
+            color:
+                var(--text-heading);
+        }
+
+        .btn-print:hover {
+
+            border-color:
+                rgba(34,197,94,0.4);
+        }
+
+        .no-qr-msg {
+
+            color:
+                var(--text-muted);
+
+            font-size: 13px;
+
+            text-align: center;
+        }
+
+        @media print {
+
+            nav,
+            .col-left,
+            .page-hero {
+                display: none;
+            }
+
+            .page-layout {
+                display: block;
+            }
+
+            .qr-preview-card {
+
+                border: none;
+                box-shadow: none;
+
+                position: static;
+            }
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<nav>
+
+    <a href="home.html" class="nav-brand">
+
+        <div class="brand-icon"
+             style="
+                background:transparent;
+                box-shadow:none;
+             ">
+
+            <img src="images/logo.png"
+                 alt="FoodChain Logo"
+                 style="
+                    width:100%;
+                    height:100%;
+                    object-fit:contain;
+                 ">
+
+        </div>
+
+        <div class="brand-text">
+
+            <strong>FoodChain</strong>
+
+            <span>
+                Batch QR &amp; Label
+            </span>
+
+        </div>
+
+    </a>
+
+
+    <div class="nav-links">
+
+        <a href="home.html"
+           class="nav-link">
+            Home
+        </a>
+
+        <a href="login.html"
+           class="nav-link">
+            Login
+        </a>
+
+        <a href="track.html"
+           class="nav-link">
+            Track
+        </a>
+
+        <a href="qr.html"
+           class="nav-link active">
+            Batch QR &amp; Label
+        </a>
+
+        <button class="nav-theme-btn"
+                onclick="toggleTheme()"
+                title="Toggle Theme">
+
+            <span id="theme-icon">
+                🌙
+            </span>
+
+        </button>
+
+    </div>
+
+</nav>
+
+
+<div class="page-layout">
+
+    <div class="page-hero">
+
+        <div class="tag">
+
+            <i class="fa-solid fa-qrcode"
+               style="
+                    color:#22c55e;
+                    font-size:11px;
+               ">
+            </i>
+
+            Blockchain-Linked QR Labels
+
+        </div>
+
+        <h1>
+            Batch QR &amp; Label
+        </h1>
+
+        <p>
+            Create a public QR label that opens
+            the verified food journey for one batch.
+            The QR contains only the public tracking link.
+        </p>
+
+    </div>
+
+
+    <div class="col-left">
+
+        <div class="form-card">
+
+            <div class="card-heading">
+
+                <i class="fa-solid fa-plus-circle"></i>
+
+                Create Batch QR Label
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label class="form-label"
+                       for="input-batch">
+
+                    Batch ID
+                    <span>
+                        from your records
+                    </span>
+
+                </label>
+
+                <input
+                    type="text"
+                    id="input-batch"
+                    class="form-input"
+                    placeholder="e.g. PROD-DEDCCD5E"
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label class="form-label"
+                       for="input-product">
+
+                    Product Name
+
+                </label>
+
+                <input
+                    type="text"
+                    id="input-product"
+                    class="form-input"
+                    placeholder="e.g. Fresh Organic Tomatoes"
+                >
+
+            </div>
+
+
+            <div class="form-row">
+
+                <div class="form-group">
+
+                    <label class="form-label"
+                           for="input-stage">
+
+                        Current Stage
+
+                    </label>
+
+                    <select
+                        id="input-stage"
+                        class="form-select">
+
+                        <option value="field">
+                            🌾 Field / Farm
+                        </option>
+
+                        <option value="warehouse">
+                            🏭 Warehouse
+                        </option>
+
+                        <option value="transport"
+                                selected>
+                            🚛 Transport
+                        </option>
+
+                        <option value="retailer">
+                            🏪 Retailer
+                        </option>
+
+                        <option value="consumer">
+                            🛒 Consumer
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label class="form-label"
+                           for="input-temp">
+
+                        Temperature (°C)
+
+                    </label>
+
+                    <input
+                        type="number"
+                        id="input-temp"
+                        class="form-input"
+                        placeholder="e.g. 28.4"
+                        step="0.1"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label class="form-label"
+                       for="input-sensor">
+
+                    Sensor Node ID
+                    <span>optional</span>
+
+                </label>
+
+                <input
+                    type="text"
+                    id="input-sensor"
+                    class="form-input"
+                    placeholder="e.g. ESP32-01"
+                >
+
+            </div>
+
+
+            <button
+                class="gen-btn"
+                onclick="generateQR()">
+
+                <i class="fa-solid fa-qrcode"></i>
+
+                Generate QR Code
+
+            </button>
+
+        </div>
+
+
+        <div class="batch-list-card">
+
+            <div class="card-heading">
+
+                <i class="fa-solid fa-boxes-packing"
+                   style="color:#3b82f6;">
+                </i>
+
+                Fetch Live Batches
+
+            </div>
+
+            <div id="batch-list">
+
+                <div style="
+                    text-align:center;
+                    padding:20px;
+                    color:var(--text-muted);
+                    font-size:13px;
+                ">
+
+                    <i class="fa-solid fa-circle-notch fa-spin"
+                       style="
+                            margin-bottom:8px;
+                            display:block;
+                            font-size:22px;
+                            color:#22c55e;
+                       ">
+                    </i>
+
+                    Loading batches from API...
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-right">
+
+        <div class="qr-preview-card">
+
+            <div id="qr-placeholder"
+                 class="qr-placeholder">
+
+                <div style="text-align:center;">
+
+                    <div class="qr-placeholder-icon">
+                        🏷️
+                    </div>
+
+                    <div style="
+                        font-size:13px;
+                        color:var(--text-muted);
+                        margin-top:8px;
+                    ">
+                        QR code appears here
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div id="qr-container"></div>
+
+
+            <div class="qr-meta"
+                 id="qr-meta"
+                 style="display:none;">
+
+                <div class="qr-meta-title"
+                     id="qr-batch-label">
+                    —
+                </div>
+
+                <div class="qr-meta-sub"
+                     id="qr-product-label">
+                    —
+                </div>
+
+
+                <div class="qr-details">
+
+                    <div class="qr-detail">
+
+                        <div class="qd-label">
+                            Producer / Farm
+                        </div>
+
+                        <div class="qd-value"
+                             id="qd-farm">
+                            —
+                        </div>
+
+                    </div>
+
+
+                    <div class="qr-detail">
+
+                        <div class="qd-label">
+                            Created
+                        </div>
+
+                        <div class="qd-value"
+                             id="qd-created">
+                            —
+                        </div>
+
+                    </div>
+
+
+                    <div class="qr-detail">
+
+                        <div class="qd-label">
+                            Verification
+                        </div>
+
+                        <div class="qd-value"
+                             id="qd-status">
+                            —
+                        </div>
+
+                    </div>
+
+
+                    <div class="qr-detail">
+
+                        <div class="qd-label">
+                            Public link
+                        </div>
+
+                        <div class="qd-value"
+                             id="qd-link-label">
+                            Track Food
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="action-row">
+
+                    <button
+                        class="btn-download"
+                        onclick="downloadQR()">
+
+                        <i class="fa-solid fa-download"></i>
+
+                        Download QR
+
+                    </button>
+
+
+                    <button
+                        class="btn-print"
+                        onclick="window.print()">
+
+                        <i class="fa-solid fa-print"></i>
+
+                        Print Label
+
+                    </button>
+
+                </div>
+
+
+                <div class="action-row">
+
+                    <button
+                        class="btn-print"
+                        onclick="copyTrackingLink()">
+
+                        <i class="fa-solid fa-link"></i>
+
+                        Copy public tracking link
+
+                    </button>
+
+
+                    <a
+                        class="btn-print"
+                        href="producer-dashboard.html"
+                        style="
+                            text-decoration:none;
+                        ">
+
+                        Create Another Batch
+
+                    </a>
+
+                </div>
+
+
+                <div
+                    class="no-qr-msg"
+                    id="copy-status"
+                    aria-live="polite">
+                </div>
+
+            </div>
+
+
+            <div id="no-qr-info"
+                 class="no-qr-msg">
+
+                Fill in the form and click
+                <strong>
+                    Generate QR Code
+                </strong>
+                to create a blockchain-linked
+                label for this batch.
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+const html =
+    document.documentElement;
+
+const themeIcon =
+    document.getElementById(
+        'theme-icon'
+    );
+
+
+function applyTheme(theme) {
+
+    html.setAttribute(
+        'data-theme',
+        theme
+    );
+
+    themeIcon.textContent =
+        theme === 'dark'
+            ? '☀️'
+            : '🌙';
+
+    localStorage.setItem(
+        'ag-theme',
+        theme
+    );
+}
+
+
+function toggleTheme() {
+
+    applyTheme(
+        html.getAttribute(
+            'data-theme'
+        ) === 'dark'
+            ? 'light'
+            : 'dark'
+    );
+}
+
+
+applyTheme(
+    localStorage.getItem(
+        'ag-theme'
+    ) || 'dark'
+);
+
+
+/* ---------------------------------------
+   State
+--------------------------------------- */
+
+let currentQRUrl = '';
+
+let currentBatchMeta = {};
+
+
+/* ---------------------------------------
+   Helpers
+--------------------------------------- */
+
+function escHtml(value) {
+
+    return String(
+        value ?? ''
+    )
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+
+function formatDate(value) {
+
+    if (!value) {
+        return '—';
+    }
+
+    const date =
+        new Date(value);
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return String(value);
+    }
+
+    return date.toLocaleDateString();
+}
+
+
+/* ---------------------------------------
+   Generate QR
+--------------------------------------- */
+
+function generateQR() {
+
+    const batchId =
+        document.getElementById(
+            'input-batch'
+        ).value.trim();
+
+    const product =
+        document.getElementById(
+            'input-product'
+        ).value.trim();
+
+
+    if (!batchId) {
+
+        document.getElementById(
+            'input-batch'
+        ).focus();
+
+        return;
+    }
+
+
+    /*
+        IMPORTANT:
+        QR contains ONLY the public tracking URL.
+        No token.
+        No sensor credentials.
+        No hashes.
+        No private data.
+    */
+
+    const trackUrl =
+        currentBatchMeta.publicTrackUrl ||
+        (
+            window.location.origin +
+            '/track.html?batch=' +
+            encodeURIComponent(batchId)
+        );
+
+
+    currentQRUrl =
+        trackUrl;
+
+
+    const container =
+        document.getElementById(
+            'qr-container'
+        );
+
+
+    container.innerHTML = '';
+
+
+    new QRCode(
+        container,
+        {
+            text: trackUrl,
+
+            width: 220,
+            height: 220,
+
+            colorDark:
+                '#0f172a',
+
+            colorLight:
+                '#ffffff',
+
+            correctLevel:
+                QRCode.CorrectLevel.H
+        }
+    );
+
+
+    document.getElementById(
+        'qr-placeholder'
+    ).style.display =
+        'none';
+
+
+    container.style.display =
+        'block';
+
+
+    document.getElementById(
+        'qr-batch-label'
+    ).textContent =
+        batchId;
+
+
+    document.getElementById(
+        'qr-product-label'
+    ).textContent =
+        product ||
+        'Food Product';
+
+
+    const producer =
+        currentBatchMeta.producer ||
+        '—';
+
+    const farm =
+        currentBatchMeta.farm ||
+        'Farm not provided';
+
+
+    document.getElementById(
+        'qd-farm'
+    ).textContent =
+        producer !== '—'
+            ? `${producer} / ${farm}`
+            : farm;
+
+
+    document.getElementById(
+        'qd-created'
+    ).textContent =
+        currentBatchMeta.created
+            ? formatDate(
+                currentBatchMeta.created
+            )
+            : '—';
+
+
+    document.getElementById(
+        'qd-status'
+    ).textContent =
+        currentBatchMeta.status ||
+        'Public record ready';
+
+
+    document.getElementById(
+        'qd-link-label'
+    ).textContent =
+        'track.html?batch=…';
+
+
+    document.getElementById(
+        'qr-meta'
+    ).style.display =
+        'block';
+
+
+    document.getElementById(
+        'no-qr-info'
+    ).style.display =
+        'none';
+}
+
+
+/* ---------------------------------------
+   URL → QR
+--------------------------------------- */
+
+function loadBatchFromUrl() {
+
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
+
+
+    const batchId =
+        params.get('batch');
+
+
+    if (!batchId) {
+        return;
+    }
+
+
+    currentBatchMeta = {
+
+        producer:
+            params.get(
+                'producer'
+            ) || '',
+
+        farm:
+            params.get(
+                'farm'
+            ) || '',
+
+        created:
+            params.get(
+                'created'
+            ) || '',
+
+        status:
+            params.get(
+                'status'
+            ) ||
+            'Blockchain record created',
+
+        publicTrackUrl:
+            params.get(
+                'track'
+            ) || ''
+    };
+
+
+    document.getElementById(
+        'input-batch'
+    ).value =
+        batchId;
+
+
+    document.getElementById(
+        'input-product'
+    ).value =
+        params.get(
+            'product'
+        ) || '';
+
+
+    generateQR();
+}
+
+
+/* ---------------------------------------
+   Download
+--------------------------------------- */
+
+function downloadQR() {
+
+    const canvas =
+        document.querySelector(
+            '#qr-container canvas'
+        );
+
+
+    if (!canvas) {
+        return;
+    }
+
+
+    const link =
+        document.createElement(
+            'a'
+        );
+
+
+    const batchId =
+        document.getElementById(
+            'input-batch'
+        ).value.trim();
+
+
+    link.download =
+        (
+            batchId ||
+            'qr-label'
+        ) + '.png';
+
+
+    link.href =
+        canvas.toDataURL(
+            'image/png'
+        );
+
+
+    link.click();
+}
+
+
+/* ---------------------------------------
+   Copy tracking URL
+--------------------------------------- */
+
+async function copyTrackingLink() {
+
+    if (!currentQRUrl) {
+        return;
+    }
+
+
+    const status =
+        document.getElementById(
+            'copy-status'
+        );
+
+
+    try {
+
+        await navigator.clipboard.writeText(
+            currentQRUrl
+        );
+
+        status.textContent =
+            'Public tracking link copied.';
+
+    } catch (error) {
+
+        status.textContent =
+            currentQRUrl;
+    }
+}
+
+
+/* ---------------------------------------
+   Fill form from LIVE batch
+--------------------------------------- */
+
+function fillFormFromBatch(batch) {
+
+    currentBatchMeta = {
+
+        producer:
+            batch.producer ||
+            batch.producer_name ||
+            '',
+
+        farm:
+            batch.farm ||
+            batch.origin ||
+            '',
+
+        created:
+            batch.created_at ||
+            batch.created ||
+            '',
+
+        status:
+            batch.status ||
+            batch.current_stage_label ||
+            'Live batch record',
+
+        publicTrackUrl:
+            batch.publicTrackUrl ||
+            batch.public_track_url ||
+            ''
+    };
+
+
+    document.getElementById(
+        'input-batch'
+    ).value =
+        batch.batch_id || '';
+
+
+    document.getElementById(
+        'input-product'
+    ).value =
+        batch.product_name ||
+        batch.product ||
+        '';
+
+
+    const stage =
+        document.getElementById(
+            'input-stage'
+        );
+
+
+    if (batch.current_stage) {
+
+        const stageValue =
+            String(
+                batch.current_stage
+            ).toLowerCase();
+
+
+        if (
+            [
+                'field',
+                'warehouse',
+                'transport',
+                'retailer',
+                'consumer'
+            ].includes(stageValue)
+        ) {
+            stage.value =
+                stageValue;
+        }
+    }
+
+
+    const temp =
+        Number(
+            batch.temperature
+        );
+
+
+    document.getElementById(
+        'input-temp'
+    ).value =
+        Number.isFinite(temp)
+            ? temp.toFixed(1)
+            : '';
+
+
+    document.getElementById(
+        'input-sensor'
+    ).value =
+        batch.device_id ||
+        batch.sensor_id ||
+        '';
+
+
+    generateQR();
+}
+
+
+/* ---------------------------------------
+   Load ONLY live batches
+--------------------------------------- */
+
+async function loadBatches() {
+
+    const listEl =
+        document.getElementById(
+            'batch-list'
+        );
+
+
+    try {
+
+        const token =
+            localStorage.getItem(
+                'auth_token'
+            );
+
+
+        const headers =
+            token
+                ? {
+                    Authorization:
+                        'Bearer ' +
+                        token
+                  }
+                : {};
+
+
+        const response =
+            await fetch(
+                '/batches',
+                {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Batch API returned HTTP ${response.status}`
+            );
+        }
+
+
+        const data =
+            await response.json();
+
+
+        const batches =
+            Array.isArray(data.batches)
+                ? data.batches.slice(0, 8)
+                : [];
+
+
+        if (!batches.length) {
+
+            listEl.innerHTML = `
+                <div style="
+                    text-align:center;
+                    padding:24px 12px;
+                    color:var(--text-muted);
+                    font-size:13px;
+                ">
+
+                    <i
+                        class="fa-solid fa-box-open"
+                        style="
+                            display:block;
+                            font-size:24px;
+                            margin-bottom:10px;
+                            color:#f59e0b;
+                        ">
+                    </i>
+
+                    <div style="
+                        color:var(--text-heading);
+                        font-weight:700;
+                        margin-bottom:5px;
+                    ">
+                        No live batches found
+                    </div>
+
+                    <div>
+                        Create a batch from the
+                        Producer dashboard first.
+                    </div>
+
+                </div>
+            `;
+
+            return;
+        }
+
+
+        listEl.innerHTML =
+            batches.map(
+                batch => {
+
+                    const risk =
+                        String(
+                            batch.risk_level ||
+                            'stable'
+                        ).toLowerCase();
+
+
+                    const riskClass =
+                        risk === 'warning'
+                            ? 'pill-amber'
+                            : risk === 'critical' ||
+                              risk === 'hold'
+                                ? 'pill-red'
+                                : 'pill-green';
+
+
+                    const riskText =
+                        risk === 'warning'
+                            ? 'Warning'
+                            : risk === 'critical' ||
+                              risk === 'hold'
+                                ? 'Hold'
+                                : 'Live';
+
+
+                    const safeBatch =
+                        JSON.stringify(
+                            batch
+                        )
+                        .replace(
+                            /'/g,
+                            '&#39;'
+                        );
+
+
+                    return `
+                        <div
+                            class="batch-item"
+                            onclick='fillFormFromBatch(${safeBatch})'
+                        >
+
+                            <div class="batch-item-info">
+
+                                <div class="batch-item-id">
+                                    ${escHtml(
+                                        batch.batch_id ||
+                                        '—'
+                                    )}
+                                </div>
+
+                                <div class="batch-item-meta">
+
+                                    ${escHtml(
+                                        batch.product_name ||
+                                        batch.product ||
+                                        'Food Product'
+                                    )}
+
+                                    &bull;
+
+                                    ${escHtml(
+                                        batch.current_stage_label ||
+                                        batch.current_stage ||
+                                        'Stage unavailable'
+                                    )}
+
+                                </div>
+
+                            </div>
+
+                            <span
+                                class="
+                                    batch-item-pill
+                                    ${riskClass}
+                                ">
+
+                                ${riskText}
+
+                            </span>
+
+                        </div>
+                    `;
+                }
+            ).join('');
+
+
+    } catch (error) {
+
+        console.error(
+            'Unable to load live batches:',
+            error
+        );
+
+
+        listEl.innerHTML = `
+
+            <div style="
+                text-align:center;
+                padding:24px 12px;
+                color:var(--text-muted);
+                font-size:13px;
+            ">
+
+                <i
+                    class="fa-solid fa-circle-exclamation"
+                    style="
+                        display:block;
+                        font-size:24px;
+                        margin-bottom:10px;
+                        color:#f59e0b;
+                    ">
+                </i>
+
+                <div style="
+                    color:var(--text-heading);
+                    font-weight:700;
+                    margin-bottom:5px;
+                ">
+                    Live batch data unavailable
+                </div>
+
+                <div>
+                    Please make sure the FoodChain
+                    backend is running and you have
+                    access to live batches.
+                </div>
+
+            </div>
+        `;
+    }
+}
+
+
+/* ---------------------------------------
+   Init
+--------------------------------------- */
+
+document.getElementById(
+    'input-batch'
+).addEventListener(
+    'keydown',
+    event => {
+
+        if (event.key === 'Enter') {
+            generateQR();
+        }
+    }
+);
+
+
+loadBatches();
+
+loadBatchFromUrl();
+
+</script>
+
 </body>
 </html>
-
-

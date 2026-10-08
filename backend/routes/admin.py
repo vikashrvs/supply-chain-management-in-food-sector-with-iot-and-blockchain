@@ -219,7 +219,7 @@ def get_admin_stats(user: dict = Depends(require_role("admin"))):
         cursor.execute("SELECT COUNT(*) AS cnt FROM batch_transfers")
         total_transfers = cursor.fetchone()["cnt"]
 
-        cursor.execute("SELECT COUNT(*) AS cnt FROM sensor_data")
+        cursor.execute("SELECT COUNT(*) AS cnt FROM sensor_readings")
         total_sensor = cursor.fetchone()["cnt"]
 
         cursor.execute("SELECT COUNT(*) AS cnt FROM audit_logs WHERE result IN ('FAILURE','DENIED')")

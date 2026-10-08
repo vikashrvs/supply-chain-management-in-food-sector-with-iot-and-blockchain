@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FoodChain - Business Dashboard</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/glassmorphism.css">
+  <link rel="stylesheet" href="css/business-dashboard.css">
+  <link rel="stylesheet" href="css/business-sidebar-reference.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-header"><div class="logo-badge"><img src="images/logo.png" alt="FoodChain logo"></div><div class="brand-info"><strong>FOODCHAIN</strong><span>From Farm to Future</span></div></div>
+    <nav class="sidebar-nav">
+      <span class="nav-section">Management</span>
+      <a class="nav-item active" href="#overview" data-detail="overview"><i class="fa-solid fa-gauge-high"></i><span>Executive Overview</span></a>
+      <a class="nav-item" href="#map-panel" data-detail="map"><i class="fa-solid fa-network-wired"></i><span>Supply Network</span></a>
+      <a class="nav-item" href="#flow" data-detail="flow"><i class="fa-solid fa-boxes-stacked"></i><span>Products &amp; Batches</span></a>
+      <a class="nav-item" href="#analytics" data-detail="analytics"><i class="fa-solid fa-chart-line"></i><span>Performance</span></a>
+      <a class="nav-item" href="#alerts" data-detail="alerts"><i class="fa-solid fa-bell"></i><span>Business Alerts</span><b id="sidebar-alert-count">0</b></a>
+      <span class="nav-section">Reports</span>
+      <a class="nav-item" href="#analytics" data-detail="analytics"><i class="fa-solid fa-chart-pie"></i><span>Analytics</span></a>
+      <button class="nav-item report-button" id="print-report" data-detail="report"><i class="fa-solid fa-file-lines"></i><span>Reports</span></button>
+    </nav>
+    <div class="sidebar-farm-message">Safe Food<br><strong>Stronger Tomorrow</strong></div>
+    <div class="sidebar-system-status"><span class="status-light"></span><span id="sidebar-system-status">System offline</span></div>
+    <button class="nav-item logout-link" data-action="logout"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></button>
+  </aside>
+  <section class="sidebar-detail-popover" id="sidebar-detail-popover" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="popover-window">
+      <div class="popover-header"><div><span class="popover-kicker">LIVE DETAIL</span><h2 id="popover-title">Executive Overview</h2></div><button class="popover-close" id="popover-close" aria-label="Close details">&times;</button></div>
+      <div id="popover-content" class="popover-content"></div>
+    </div>
+  </section>
+  <main class="main-wrapper">
+    <header class="top-header">
+      <label class="dashboard-search"><i class="fa-solid fa-magnifying-glass"></i><input id="dashboard-search-input" type="search" placeholder="Search batches, products, locations..." aria-label="Search dashboard"></label>
+      <div class="top-actions"><span class="date-pill"><i class="fa-regular fa-calendar"></i> <span id="current-date"></span></span><div class="user-chip"><span class="user-avatar">M</span><span><strong>Manager</strong><small>Business View</small></span><i class="fa-solid fa-chevron-down"></i></div></div>
+      <div class="profile-menu" id="profile-menu" aria-hidden="true"><button id="profile-logout" type="button"><i class="fa-solid fa-right-from-bracket"></i> Log out</button></div>
+    </header>
+    <div class="dashboard-intro"><div><h1>Business Dashboard</h1></div></div>
+    <div id="data-error" class="data-message" hidden></div>
+    <div class="content-container" id="overview">
+      <section class="kpi-grid" id="kpis">
+        <div class="glass-card kpi-card"><label>Total Products</label><strong data-kpi="total_batches">No data</strong></div>
+        <div class="glass-card kpi-card"><label>Active Shipments</label><strong data-kpi="active_shipments">No data</strong></div>
+        <div class="glass-card kpi-card"><label>Delivered</label><strong data-kpi="delivered">No data</strong></div>
+        <div class="glass-card kpi-card"><label>In Transit</label><strong data-kpi="in_transit">No data</strong></div>
+        <div class="glass-card kpi-card"><label>Supply Chain Efficiency</label><strong data-kpi="efficiency_percent">No data</strong></div>
+        <div class="glass-card kpi-card"><label>Active IoT Devices</label><strong data-kpi="active_iot_devices">No data</strong><small class="sensor-readout" id="sensor-readout">Temperature -- · Humidity --</small></div>
+      </section>
+      <section class="glass-panel flow-panel" id="flow"><h2>Supply Chain Flow</h2><div class="flow-grid" id="flow-grid"></div></section>
+      <section class="dashboard-grid">
+        <div class="glass-panel map-panel" id="map-panel"><h2>Active Shipment Locations</h2><div id="business-map" class="business-map"></div><p class="empty-state" id="map-empty">No persisted GPS locations available.</p></div>
+        <div class="glass-panel"><h2>Product Distribution</h2><div class="chart-wrap"><canvas id="product-chart"></canvas></div><p class="empty-state" id="product-empty">No persisted product data available.</p></div>
+      </section>
+      <section class="dashboard-grid" id="analytics">
+        <div class="glass-panel"><h2>Shipment Distribution</h2><div class="chart-wrap"><canvas id="shipment-chart"></canvas></div></div>
+        <div class="glass-panel"><h2>Efficiency</h2><div class="chart-wrap"><canvas id="efficiency-chart"></canvas></div><p class="empty-state">Historical trend requires persisted dated performance records.</p></div>
+      </section>
+      <section class="dashboard-grid">
+        <div class="glass-panel"><h2>Recent Activities</h2><div id="activities" class="record-list"></div></div>
+        <div class="glass-panel" id="alerts"><h2>Active Alerts</h2><div id="alerts-list" class="record-list"></div></div>
+      </section>
+    </div>
+  </main>
+  <script src="js/business-dashboard.js"></script>
+  <script>
+    (function () {
+      var el = document.getElementById('current-date');
+      if (el) el.textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    })();
+  </script>
+</body>
+</html>

@@ -100,157 +100,287 @@ def register_db_batches(limit: int = 1000, reset: bool = False):
 @router.get("/api/agent-alerts")
 def get_agent_alerts():
     """
-    AI Agent rule-based anomaly scan across all latest batch readings and system services.
-    Detects: temperature out of range, high humidity, stale IoT data, and Fabric service downtime.
-    Returns structured alerts with severity levels, sender attribution, and AI recommendations.
+    Code-based rule engine — scans all active batches and system services.
+    No AI/LLM involved. Pure threshold and pattern checks.
+
+    Rules checked:
+      1. Blockchain service downtime
+      2. Temperature critically high per stage
+      3. Temperature above optimal per stage
+      4. Temperature below minimum (freezing risk)
+      5. Humidity critically high (mold risk)
+      6. Humidity elevated (spoilage risk)
+      7. Gas / environment sensor critically high
+      8. Gas sensor elevated
+      9. Stale IoT data (no update > 2h)
+      10. MQTT data gap (no update > 10 min — ESP32 likely offline)
+      11. Temperature spike (sudden rise > 5°C from previous reading)
     """
-    from database import fetch_latest_batch_rows, row_to_dict
+    from database import fetch_latest_batch_rows, row_to_dict, get_connection
     from datetime import datetime
     from services.fabric_client import get_fabric_status
 
     alerts = []
+    now = datetime.now()
 
-    # Check 1: Fabric Blockchain Service Status (use cached state — do NOT re-run docker ps here)
+    # ── Rule 1: Blockchain / Fabric Service Status ────────────────────────────
     fabric_status = get_fabric_status()
-    fabric_online = fabric_status["fabric_available"]
-    if not fabric_online:
+    if not fabric_status["fabric_available"]:
         alerts.append({
             "severity":       "critical",
-            "rule":           "blockchain-downtime",
-            "source":         "Ledger-Guard",
-            "alert_source":   "Ledger-Guard",
+            "rule":           "blockchain-offline",
+            "source":         "BlockchainMonitor",
+            "alert_source":   "BlockchainMonitor",
             "alert_flag":     1,
             "batch_id":       "SYSTEM",
             "product":        "Hyperledger Fabric Node",
             "stage":          "blockchain",
-            "timestamp":      datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "message":        "Hyperledger Fabric blockchain service is down/unreachable. System fallback active (SHA-256 local hash chain).",
-            "recommendation": "Verify Docker containers (peer0.org1.example.com) in WSL. Run start.bat to restore Fabric network.",
+            "timestamp":      now.strftime("%Y-%m-%d %H:%M:%S"),
+            "message":        "Fabric blockchain service is offline. SHA-256 local hash chain fallback is active.",
+            "recommendation": "Check Docker containers (peer0.org1.example.com) in WSL. Run start.bat to restore.",
             "icon":           "fa-link-slash",
         })
 
-    # Check 2: Sensor Anomalies across Active Batches
+    # ── Per-stage temperature thresholds ─────────────────────────────────────
+    # Format: stage -> (min_safe, max_safe)
+    TEMP_LIMITS = {
+        "field":     (5,  35),
+        "processing":(2,  25),
+        "warehouse": (2,  15),
+        "transport": (2,  25),   # real ESP32 in ambient — 28°C is above ideal but not critical
+        "retailer":  (2,  18),
+        "consumer":  (0,  25),
+    }
+    TEMP_CRITICAL_MARGIN = 8   # °C above max before "critical" (not just warning)
+
+    # Humidity thresholds
+    HUMID_CRITICAL = 92   # % — mold risk
+    HUMID_HIGH     = 80   # % — elevated spoilage risk
+
+    # Gas thresholds (ppm)
+    GAS_CRITICAL = 200
+    GAS_HIGH     = 150
+
+    # Stale data thresholds
+    STALE_CRITICAL_MINS = 120   # 2 hours — sensor likely dead
+    STALE_WARN_MINS     = 10    # 10 min  — ESP32 probably offline between 30s cycles
+
+    # ── Fetch latest reading per active batch ─────────────────────────────────
     rows    = fetch_latest_batch_rows()
     batches = [row_to_dict(row) for row in rows]
 
     for b in batches:
         temp    = b.get("temperature")
         humid   = b.get("humidity")
+        gas     = b.get("gas_value")
         stage   = (b.get("current_stage") or "transport").lower()
-        batch   = b.get("batch_id")   or "UNKNOWN"
-        product = b.get("product")    or "Food Stock"
-        ts      = b.get("timestamp")  or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        batch   = b.get("batch_id")  or "UNKNOWN"
+        product = b.get("product")   or "Food Stock"
+        ts      = b.get("timestamp") or now.strftime("%Y-%m-%d %H:%M:%S")
+        mins    = b.get("minutes_since_update")
 
-        # Temperature limits per supply chain stage
-        temp_limits = {
-            "field":     (0,  35),
-            "warehouse": (2,  15),
-            "transport": (2,  20),
-            "retailer":  (2,  18),
-            "consumer":  (0,  25),
-        }
-        t_min, t_max = temp_limits.get(stage, (0, 30))
+        t_min, t_max = TEMP_LIMITS.get(stage, (0, 30))
 
+        # ── Rule 2 & 3 & 4: Temperature ──────────────────────────────────────
         if temp is not None:
-            if temp > t_max + 5:
+            if temp > t_max + TEMP_CRITICAL_MARGIN:
                 alerts.append({
                     "severity":       "critical",
-                    "rule":           "temp-high",
-                    "source":         "Aero",
-                    "alert_source":   "Aero",
+                    "rule":           "temp-critically-high",
+                    "source":         "TempMonitor",
+                    "alert_source":   "TempMonitor",
                     "alert_flag":     1,
                     "batch_id":       batch,
                     "product":        product,
                     "stage":          stage,
                     "timestamp":      ts,
-                    "message":        f"Temperature {temp:.1f}°C critically high (limit: {t_max}°C) at {stage} stage.",
-                    "recommendation": "Inspect refrigeration unit immediately. Consider quarantining batch.",
+                    "message":        f"Temperature {temp:.1f}°C — CRITICALLY HIGH (safe max: {t_max}°C at {stage} stage).",
+                    "recommendation": "Immediately inspect refrigeration unit. Consider quarantining batch.",
                     "icon":           "fa-fire",
                 })
             elif temp > t_max:
                 alerts.append({
                     "severity":       "warning",
-                    "rule":           "temp-high-warn",
-                    "source":         "Aero",
-                    "alert_source":   "Aero",
+                    "rule":           "temp-above-range",
+                    "source":         "TempMonitor",
+                    "alert_source":   "TempMonitor",
                     "alert_flag":     1,
                     "batch_id":       batch,
                     "product":        product,
                     "stage":          stage,
                     "timestamp":      ts,
-                    "message":        f"Temperature {temp:.1f}°C above optimal ({t_min}–{t_max}°C).",
-                    "recommendation": "Monitor temperature. Check cooling equipment.",
+                    "message":        f"Temperature {temp:.1f}°C above safe range ({t_min}–{t_max}°C) at {stage} stage.",
+                    "recommendation": "Monitor temperature. Check cooling equipment performance.",
                     "icon":           "fa-temperature-high",
                 })
             elif temp < t_min:
                 alerts.append({
                     "severity":       "warning",
-                    "rule":           "temp-low",
-                    "source":         "Aero",
-                    "alert_source":   "Aero",
+                    "rule":           "temp-below-range",
+                    "source":         "TempMonitor",
+                    "alert_source":   "TempMonitor",
                     "alert_flag":     1,
                     "batch_id":       batch,
                     "product":        product,
                     "stage":          stage,
                     "timestamp":      ts,
-                    "message":        f"Temperature {temp:.1f}°C below minimum ({t_min}°C).",
-                    "recommendation": "Check for freezing risk. Adjust storage temperature.",
+                    "message":        f"Temperature {temp:.1f}°C below minimum ({t_min}°C) — freezing risk.",
+                    "recommendation": "Check for freezing damage. Adjust thermostat setting.",
                     "icon":           "fa-snowflake",
                 })
 
+        # ── Rule 5 & 6: Humidity ─────────────────────────────────────────────
         if humid is not None:
-            if humid > 92:
+            if humid > HUMID_CRITICAL:
                 alerts.append({
                     "severity":       "critical",
-                    "rule":           "humid-critical",
-                    "source":         "Orion",
-                    "alert_source":   "Orion",
+                    "rule":           "humidity-critical",
+                    "source":         "HumidityMonitor",
+                    "alert_source":   "HumidityMonitor",
                     "alert_flag":     1,
                     "batch_id":       batch,
                     "product":        product,
                     "stage":          stage,
                     "timestamp":      ts,
                     "message":        f"Humidity {humid:.1f}% — critical risk of mold and spoilage.",
-                    "recommendation": "Activate dehumidifiers immediately. Inspect for water ingress.",
+                    "recommendation": "Activate dehumidifiers immediately. Inspect packaging for water ingress.",
                     "icon":           "fa-droplet",
                 })
-            elif humid > 80:
+            elif humid > HUMID_HIGH:
                 alerts.append({
                     "severity":       "warning",
-                    "rule":           "humid-high",
-                    "source":         "Orion",
-                    "alert_source":   "Orion",
+                    "rule":           "humidity-elevated",
+                    "source":         "HumidityMonitor",
+                    "alert_source":   "HumidityMonitor",
                     "alert_flag":     1,
                     "batch_id":       batch,
                     "product":        product,
                     "stage":          stage,
                     "timestamp":      ts,
-                    "message":        f"Elevated humidity {humid:.1f}%. Monitor for spoilage.",
-                    "recommendation": "Increase ventilation. Check packaging integrity.",
+                    "message":        f"Humidity {humid:.1f}% — elevated, monitor for spoilage.",
+                    "recommendation": "Improve ventilation. Check packaging integrity.",
                     "icon":           "fa-cloud-rain",
                 })
 
-        # Stale IoT data check
-        mins = b.get("minutes_since_update")
-        if mins is not None and mins > 120:
+        # ── Rule 7 & 8: Gas / Environment sensor ─────────────────────────────
+        if gas is not None and gas > 0:
+            if gas > GAS_CRITICAL:
+                alerts.append({
+                    "severity":       "critical",
+                    "rule":           "gas-critical",
+                    "source":         "GasMonitor",
+                    "alert_source":   "GasMonitor",
+                    "alert_flag":     1,
+                    "batch_id":       batch,
+                    "product":        product,
+                    "stage":          stage,
+                    "timestamp":      ts,
+                    "message":        f"Gas/VOC level {gas:.0f} ppm — critical. Possible spoilage or contamination.",
+                    "recommendation": "Isolate batch. Inspect for spoilage, chemical contamination, or packaging failure.",
+                    "icon":           "fa-skull-crossbones",
+                })
+            elif gas > GAS_HIGH:
+                alerts.append({
+                    "severity":       "warning",
+                    "rule":           "gas-elevated",
+                    "source":         "GasMonitor",
+                    "alert_source":   "GasMonitor",
+                    "alert_flag":     1,
+                    "batch_id":       batch,
+                    "product":        product,
+                    "stage":          stage,
+                    "timestamp":      ts,
+                    "message":        f"Gas/VOC level {gas:.0f} ppm — elevated. Monitor closely.",
+                    "recommendation": "Inspect product for early spoilage. Increase ventilation.",
+                    "icon":           "fa-wind",
+                })
+
+        # ── Rule 9: Stale data (sensor likely dead) ───────────────────────────
+        if mins is not None and mins > STALE_CRITICAL_MINS:
             alerts.append({
-                "severity":       "info",
-                "rule":           "stale-data",
-                "source":         "Data-Tron",
-                "alert_source":   "Data-Tron",
+                "severity":       "critical",
+                "rule":           "sensor-dead",
+                "source":         "ConnectivityMonitor",
+                "alert_source":   "ConnectivityMonitor",
                 "alert_flag":     1,
                 "batch_id":       batch,
                 "product":        product,
                 "stage":          stage,
                 "timestamp":      ts,
-                "message":        f"No sensor update for {mins} minutes.",
-                "recommendation": "Check IoT sensor connectivity. Verify MQTT broker is running.",
-                "icon":           "fa-wifi-slash",
+                "message":        f"No sensor data for {mins:.0f} minutes — IoT device may be offline or failed.",
+                "recommendation": "Check ESP32 power supply, Wi-Fi connection, and MQTT broker.",
+                "icon":           "fa-tower-broadcast",
+            })
+        # ── Rule 10: Short gap (ESP32 between 30s pulses but missing) ─────────
+        elif mins is not None and STALE_WARN_MINS < mins <= STALE_CRITICAL_MINS:
+            alerts.append({
+                "severity":       "info",
+                "rule":           "sensor-gap",
+                "source":         "ConnectivityMonitor",
+                "alert_source":   "ConnectivityMonitor",
+                "alert_flag":     0,
+                "batch_id":       batch,
+                "product":        product,
+                "stage":          stage,
+                "timestamp":      ts,
+                "message":        f"Sensor update gap: {mins:.0f} min. ESP32 may be reconnecting.",
+                "recommendation": "Monitor. If gap exceeds 2h, check MQTT broker and ESP32 connectivity.",
+                "icon":           "fa-wifi",
             })
 
-    # Sort: critical → warning → info
+    # ── Rule 11: Temperature spike detection (last 2 readings per batch) ─────
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT batch_id, temperature, timestamp
+                FROM sensor_readings
+                WHERE batch_id IN (
+                    SELECT DISTINCT COALESCE(NULLIF(batch_id,''), product_id)
+                    FROM sensor_readings
+                    WHERE batch_id IS NOT NULL AND batch_id != ''
+                )
+                AND id IN (
+                    SELECT id FROM sensor_readings
+                    WHERE batch_id IS NOT NULL
+                    ORDER BY id DESC
+                    LIMIT 100
+                )
+                ORDER BY batch_id, id DESC
+                """
+            )
+            spike_rows = cursor.fetchall()
+
+        # Group by batch, take last 2 readings
+        from collections import defaultdict
+        batch_readings = defaultdict(list)
+        for r in spike_rows:
+            batch_readings[r["batch_id"]].append(r["temperature"])
+
+        for bid, temps in batch_readings.items():
+            if len(temps) >= 2 and temps[0] is not None and temps[1] is not None:
+                delta = temps[0] - temps[1]   # newest - previous
+                if delta > 5:
+                    alerts.append({
+                        "severity":       "warning",
+                        "rule":           "temp-spike",
+                        "source":         "TrendMonitor",
+                        "alert_source":   "TrendMonitor",
+                        "alert_flag":     1,
+                        "batch_id":       bid,
+                        "product":        "Batch Stock",
+                        "stage":          "transport",
+                        "timestamp":      now.strftime("%Y-%m-%d %H:%M:%S"),
+                        "message":        f"Sudden temperature rise of +{delta:.1f}°C detected ({temps[1]:.1f}°C → {temps[0]:.1f}°C).",
+                        "recommendation": "Check for refrigeration failure or door opening event.",
+                        "icon":           "fa-chart-line",
+                    })
+    except Exception:
+        pass   # Spike detection is best-effort — never crash the main alert list
+
+    # ── Sort: critical → warning → info ──────────────────────────────────────
     order = {"critical": 0, "warning": 1, "info": 2}
     alerts.sort(key=lambda a: order.get(a["severity"], 3))
 
     return {"count": len(alerts), "alerts": alerts}
-
