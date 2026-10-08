@@ -116,3 +116,88 @@
   border-color: var(--green);
   box-shadow: 0 0 0 4px var(--green-soft);
 }
+
+/* ── Premium component upgrades (added) ──────────────────────────────────── */
+
+.glass-card, .glass-panel {
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out), border-color 0.3s var(--ease-out);
+}
+
+.glass-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-elevated);
+}
+
+/* Live/connected indicator — small pulsing dot, used once near the header
+   to signal real-time data rather than a static "Live" label alone */
+.live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: var(--glow-live);
+  animation: live-pulse 2.2s var(--ease-out) infinite;
+}
+
+@keyframes live-pulse {
+  0%, 100% { box-shadow: var(--glow-live); }
+  50% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.08), 0 0 22px rgba(34, 197, 94, 0.45); }
+}
+
+/* Unified status pill — one visual language for batch/shipment status
+   across Admin, Producer, Distributor and Business dashboards */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.status-pill.ok { background: var(--green-soft); color: var(--green); }
+.status-pill.warn { background: var(--amber-soft); color: var(--amber); }
+.status-pill.danger { background: var(--red-soft); color: var(--red); }
+.status-pill.info { background: var(--blue-soft); color: var(--blue); }
+.status-pill.gold { background: var(--gold-soft); color: var(--gold); }
+
+/* Sidebar "ledger spine" — the one bold signature element: an animated
+   gradient line marking the active nav item, evoking a ledger entry
+   being written rather than a plain highlight background */
+.sidebar .nav-item.active,
+.bi-nav a.active {
+  position: relative;
+}
+.sidebar .nav-item.active::before,
+.bi-nav a.active::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--green), var(--blue));
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+}
+
+/* Primary button — consistent elevated treatment across dashboards */
+.btn-primary {
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  color: #06210f;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px -6px rgba(34, 197, 94, 0.45);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}

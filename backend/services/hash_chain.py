@@ -14,7 +14,7 @@ def get_last_hash(batch_id):
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT block_hash FROM sensor_data WHERE batch_id = ? ORDER BY id DESC LIMIT 1",
+            "SELECT block_hash FROM sensor_readings WHERE batch_id = ? ORDER BY id DESC LIMIT 1",
             (batch_id,),
         )
         row = cursor.fetchone()

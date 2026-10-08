@@ -10,7 +10,7 @@ FoodChain is an enterprise-grade food supply chain traceability and compliance m
 graph TD
     subgraph IoT_Layer [IoT Telemetry Layer]
         ESP32[ESP32 Hardware Node] -->|MQTT| Mosquitto[Mosquitto Broker]
-        Simulator[Sensor Simulation Tool] -->|MQTT| Mosquitto
+        Replay[Prerecorded Replay Dataset] -->|MQTT| Mosquitto
     end
 
     subgraph Edge_Layer [Edge Processing Layer]
@@ -59,7 +59,30 @@ Simply double-click or run:
 ```cmd
 start.bat
 ```
-*This automatically launches Hyperledger Fabric (WSL2), Mosquitto MQTT Broker, FastAPI Backend (`http://127.0.0.1:8001`), IoT Simulation, and opens the Web Portal in your browser.*
+*This automatically launches Hyperledger Fabric (WSL2), Mosquitto MQTT Broker, and the FastAPI Backend (`http://127.0.0.1:8001`) for physical ESP32 telemetry. The operational dashboards read live MQTT data only.*
+
+### Explicit Legacy Demo Replay
+
+Replay is isolated from live operation. Replay MQTT messages on `food/sensor/replay/#` are ignored by default, and the new producer, distributor, business, and admin dashboards never call replay endpoints.
+
+For the legacy single-dashboard demo only, replay must be explicitly opted in:
+
+- `FC-001`: Bengaluru Cold Storage Facility -> Mysuru Distribution Center
+- `FC-002`: Bengaluru Processing Facility -> Mandya Warehouse
+- `FC-003`: Bengaluru Warehouse -> Hassan Retail Distribution Hub
+
+Open `http://127.0.0.1:8001/dashboard.html` only when intentionally testing the legacy demo controls. The page requests `demo=true`; it is not a source for operational dashboards. To allow replay MQTT ingestion for a controlled demo session, set `FOODCHAIN_ENABLE_REPLAY=1` before starting the backend. Leave it unset for real ESP32 operation.
+
+Useful endpoints:
+
+```text
+GET  /api/replay/dataset?batch_id=FC-001&demo=true
+GET  /api/replay/transportation?batch_id=FC-001&demo=true
+POST /api/replay/start?batch_id=FC-001&interval_seconds=1.5&reset=true&demo=true
+POST /api/replay/pause?demo=true
+POST /api/replay/step?demo=true
+POST /api/replay/reset?batch_id=FC-001&demo=true
+```
 
 ### 2. Stop All Services
 Simply double-click or run:
@@ -108,11 +131,9 @@ food_chain/
 │   ├── dashboard.html        # Admin control console
 │   ├── qr.html               # QR manager and html5-qrcode camera scanner
 │   └── track.html            # Consumer timeline & Leaflet map tracking
-├── iot_simulation/           # Physical Node & Simulation scripts
-│   ├── esp32_firmware/
-│   │   └── foodchain_sensor.ino  # ESP32 C++ microcontroller code
-│   ├── edge_processor.py     # Python edge analytics service
-│   └── sensor_simulation.py  # Standalone mock telemetry generator
+├── iot/                      # IoT source organization
+│   ├── prerecorded_replay/   # Current demo replay notes and payload schema
+│   └── real_devices/         # Future ESP32, DHT, gas, and GPS placeholders
 └── README.md                 # Primary system documentation
 ```
 

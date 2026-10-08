@@ -4,3 +4,6 @@ paho-mqtt
 python-jose[cryptography]
 bcrypt
 pydantic
+crewai
+langchain-community
+httpx

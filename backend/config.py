@@ -10,6 +10,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "food_chain.db"
 FRONTEND_DIR = BASE_DIR.parent / "frontend"
+FRONTEND_LEGACY_DIR = BASE_DIR.parent / "old_frontend"   # kept safe — switch back anytime
 
 # ── Supply Chain Constants ───────────────────────────────────────────────────
 SUPPLY_CHAIN_STAGES = ["field", "warehouse", "transport", "retailer", "consumer"]
@@ -48,6 +49,9 @@ STAGE_THRESHOLDS = {
 SECRET_KEY = os.environ.get("FOODCHAIN_SECRET_KEY", "foodchain-vtu-project-secret-key-2026")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
+ENABLE_REPLAY_INGESTION = os.environ.get("FOODCHAIN_ENABLE_REPLAY", "").strip().lower() in {
+    "1", "true", "yes", "on"
+}
 
 # ── SQL Expression Constants ────────────────────────────────────────────────
 BATCH_KEY_EXPR = (
@@ -81,8 +85,17 @@ RECORD_SELECT = f"""
         sd.humidity,
         sd.latitude,
         sd.longitude,
+        sd.gas_value,
         sd.product_id,
         sd.status,
+        sd.transportation_status,
+        sd.alert_status,
+        sd.telemetry_mode,
+        sd.origin_name,
+        sd.destination_name,
+        sd.replay_record_id,
+        sd.fabric_tx_id,
+        sd.field_hash,
         sd.block_hash,
         {BATCH_KEY_EXPR} AS batch_id,
         {UID_KEY_EXPR} AS product_uid,
@@ -91,6 +104,6 @@ RECORD_SELECT = f"""
         COALESCE(sd.sensor_id, 'UNKNOWN_SENSOR') AS sensor_id,
         {CURRENT_STAGE_EXPR} AS current_stage,
         COALESCE(sd.product_ref, pr.id) AS product_ref
-    FROM sensor_data sd
+    FROM sensor_readings sd
     LEFT JOIN product_registry pr ON pr.id = sd.product_ref
 """

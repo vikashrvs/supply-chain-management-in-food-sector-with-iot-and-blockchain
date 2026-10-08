@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodChain - Distributor Portal</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/glassmorphism.css">
+    <link rel="stylesheet" href="css/distributor-dashboard.css">
+    <link rel="stylesheet" href="css/sidebar-detail-modal.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
+    
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/role-guard.js"></script>
+    <script src="js/sidebar-detail-modal.js"></script>
+    
+    <style>
+        :root {
+            --brand-color: var(--blue);
+            --brand-color-dark: var(--blue-dark);
+            --brand-color-soft: var(--blue-soft);
+            --brand-glow: rgba(59, 130, 246, 0.3);
+        }
+        .sidebar-nav .nav-item.active {
+            color: var(--blue);
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(77,163,255,.24);
+        }
+        .btn-distributor {
+            background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-distributor:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(0,0,0,.22);
+        }
+        .btn-anomaly {
+            background: linear-gradient(135deg, var(--red), #b91c1c);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-anomaly:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(0,0,0,.22);
+        }
+        .dashboard-content-section {
+            display: none;
+        }
+        .dashboard-content-section.active {
+            display: block;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .form-control {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text-heading);
+            font-family: var(--font-main);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-control:focus {
+            border-color: var(--blue);
+        }
+        .card-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .summary-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .summary-card i {
+            font-size: 24px;
+            color: var(--blue);
+            background: rgba(59, 130, 246, 0.1);
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+        }
+        .summary-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .summary-info label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        .summary-info span {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-heading);
+        }
+        .search-box-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        /* Distributor logistics workspace */
+        body { background: #0a141d; }
+        .sidebar { border-right-color: rgba(230,185,52,.18); }
+        .sidebar-header { padding: 8px 8px 22px; }
+        .logo-badge.compact-logo { display: none; }
+        .main-wrapper { margin-left: 204px; }
+        .top-header { padding: 24px 32px; border-bottom-color: rgba(230,185,52,.16); }
+        .content-container { padding: 28px 32px 40px; gap: 20px; }
+        .summary-card, .glass-panel { border-color: rgba(230,185,52,.14); background: #10202c; box-shadow: 0 12px 28px rgba(0,0,0,.16); }
+        .distributor-kpi-grid { grid-template-columns: repeat(6, minmax(145px, 1fr)); min-width: 0; }
+        .summary-card { min-height: 106px; padding: 18px; }
+        .summary-info span { font-size: 25px; }
+        .card-header { min-height: 60px; height: auto; padding: 15px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+        .card-header h2 { line-height:1.35; }
+        .distribution-flow { display:flex; align-items:stretch; gap:8px; padding:18px 20px 20px; }
+        .distribution-stage { flex:1; padding:14px 10px; border:1px solid rgba(230,185,52,.22); border-radius:10px; background:#152735; color:inherit; cursor:pointer; text-align:left; }
+        .distribution-stage:hover, .distribution-stage.active { border-color:#e6b934; background:rgba(230,185,52,.1); }
+        .distribution-stage span, .distribution-stage strong { display:block; }
+        .distribution-stage span { color:#9db2c9; font-size:11px; }
+        .distribution-stage strong { margin-top:7px; color:#e6c85b; font-size:25px; }
+        .distribution-arrow { align-self:center; color:#7f8f9e; font-size:12px; }
+        .distributor-modal-overlay[hidden] { display:none; }
+        .distributor-modal-overlay { position:fixed; inset:0; z-index:1200; display:grid; place-items:center; padding:20px; background:rgba(2,8,14,.78); }
+        .distributor-modal { width:min(760px,100%); max-height:90vh; overflow:auto; border:1px solid rgba(230,185,52,.4); border-radius:14px; background:#10202c; box-shadow:0 22px 50px rgba(0,0,0,.44); }
+        .distributor-modal-body { padding:18px 20px 22px; }
+        .shipment-row { display:grid; grid-template-columns:1.2fr 1.5fr .9fr .9fr auto; gap:10px; align-items:center; padding:12px; border:1px solid var(--border); border-radius:9px; font-size:12px; }
+        @media (max-width: 1200px) { .distributor-kpi-grid { grid-template-columns:repeat(3,minmax(145px,1fr)); } }
+        @media (max-width: 900px) { .distributor-kpi-grid { grid-template-columns:repeat(2,minmax(145px,1fr)); } }
+        @media (max-width: 700px) { .content-container { padding:18px 12px 30px; } .distribution-flow { flex-direction:column; } .distribution-arrow { transform:rotate(90deg); } .distributor-kpi-grid { grid-template-columns:1fr; } .shipment-row { grid-template-columns:1fr 1fr; } }
+    /* FIX: content must begin immediately after the sidebar grid column. */
+        .main-wrapper { margin-left: 0 !important; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-info">
+                <strong>FoodChain</strong>
+                <span>Distributor Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <span class="nav-section">Operations</span>
+            <a href="#" onclick="showSection('overview'); return false;" id="nav-overview" class="nav-item active"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
+            <a href="#search" onclick="showSection('search'); return false;" id="nav-search" class="nav-item"><i class="fa-solid fa-barcode"></i><span>Search / Scan Batch</span></a>
+            <a href="#transfer" onclick="showSection('transfer'); return false;" id="nav-transfer" class="nav-item"><i class="fa-solid fa-truck-ramp-box"></i><span>Record Transfer</span></a>
+            <a href="#anomalies" onclick="showSection('anomalies'); return false;" id="nav-anomalies" class="nav-item"><i class="fa-solid fa-triangle-exclamation"></i><span>Flag Anomaly</span></a>
+            <a href="#history" onclick="showSection('history'); return false;" id="nav-history" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>Transfer History</span></a>
+            
+            <span class="nav-section">Public Links</span>
+            <a href="track.html" class="nav-item"><i class="fa-solid fa-route"></i><span>Consumer Trace</span></a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span class="pulse-dot dot-blue" id="connection-dot"></span>
+            <div class="footer-status-text">
+                <strong id="connection-status">Checking connection...</strong>
+            </div>
+        </div>
+        <a href="#" onclick="logout(); return false;" class="nav-item logout-link">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Logout</span>
+        </a>
+    </aside>
+
+    <div class="main-wrapper">
+        <header class="top-header">
+            <div class="header-title">
+                <h1 id="dashboard-title">Distributor Panel</h1>
+                <p id="dashboard-subtitle">Manage shipments, monitor cold-chain conditions, and record distribution events</p>
+            </div>
+
+            <div class="header-controls">
+                <span id="current-date">--</span>
+                <span id="current-time">--</span>
+                <div class="user-avatar" id="user-avatar">D</div>
+            </div>
+        </header>
+
+        <main class="content-container">
+            <!-- ── SECTION: OVERVIEW ── -->
+            <section id="sect-overview" class="dashboard-content-section active">
+                <div class="card-summary-grid distributor-kpi-grid">
+                    <div class="summary-card">
+                        <i class="fa-solid fa-truck-moving"></i>
+                        <div class="summary-info">
+                            <label>Incoming Shipments</label><span id="stat-incoming">0</span>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <i class="fa-solid fa-temperature-arrow-up" style="color: var(--red); background: rgba(239, 68, 68, 0.1);"></i>
+                        <div class="summary-info">
+                            <label>Active Shipments</label><span id="stat-active">0</span>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <i class="fa-solid fa-cube" style="color: var(--green); background: rgba(34, 197, 94, 0.1);"></i>
+                        <div class="summary-info">
+                            <label>Delivered</label><span id="stat-delivered">0</span>
+                        </div>
+                    </div>
+                    <div class="summary-card"><i class="fa-solid fa-clock" style="color:var(--amber);"></i><div class="summary-info"><label>Delayed</label><span id="stat-delayed">0</span></div></div>
+                    <div class="summary-card"><i class="fa-solid fa-temperature-high" style="color:var(--red);"></i><div class="summary-info"><label>Condition Alerts</label><span id="stat-condition-alerts">0</span></div></div>
+                    <div class="summary-card"><i class="fa-solid fa-microchip" style="color:#b7a8ff;"></i><div class="summary-info"><label>Active IoT Devices</label><span id="stat-iot-devices">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <div class="card-header"><h2><i class="fa-solid fa-route"></i> Distribution flow</h2><span style="color:var(--muted);font-size:11px;">Click a stage to inspect shipments</span></div>
+                    <div class="distribution-flow">
+                        <button class="distribution-stage active" onclick="openDistributionStage('incoming')"><span>Incoming</span><strong id="flow-incoming">0</strong></button><i class="fa-solid fa-chevron-right distribution-arrow"></i>
+                        <button class="distribution-stage" onclick="openDistributionStage('accepted')"><span>Accepted</span><strong id="flow-accepted">0</strong></button><i class="fa-solid fa-chevron-right distribution-arrow"></i>
+                        <button class="distribution-stage" onclick="openDistributionStage('transit')"><span>In Transit</span><strong id="flow-transit">0</strong></button><i class="fa-solid fa-chevron-right distribution-arrow"></i>
+                        <button class="distribution-stage" onclick="openDistributionStage('distributor')"><span>At Distributor</span><strong id="flow-distributor">0</strong></button><i class="fa-solid fa-chevron-right distribution-arrow"></i>
+                        <button class="distribution-stage" onclick="openDistributionStage('delivered')"><span>Delivered</span><strong id="flow-delivered">0</strong></button>
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-clock-rotate-left"></i> My Recent Transfer Events</h2>
+                        <button class="btn-distributor" onclick="showSection('transfer')"><i class="fa-solid fa-plus"></i> Record Event</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Event ID</th>
+                                    <th>Batch ID</th>
+                                    <th>Event Type</th>
+                                    <th>Location</th>
+                                    <th>Temp/Humidity</th>
+                                    <th>Recorded At</th>
+                                    <th>Blockchain Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="overview-transfers-table">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; color: var(--text-muted);">Loading transfers...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── SECTION: SEARCH / SCAN BATCH ── -->
+            <section id="sect-search" class="dashboard-content-section">
+                <div class="glass-panel" style="max-width: 800px; margin: 0 auto 24px;">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-magnifying-glass"></i> Scan / Lookup Batch ID</h2>
+                    </div>
+                    <div class="search-box-container">
+                        <input type="text" id="search-batch-id" class="form-control" style="flex:1;" placeholder="Enter Batch ID (e.g. FC-001 or PROD-XXXXXX)">
+                        <button class="btn-distributor" onclick="handleBatchSearch()"><i class="fa-solid fa-search"></i> Search</button>
+                    </div>
+                    <div id="search-alert" class="alert-box" style="display: none;"></div>
+                </div>
+
+                <div id="search-results-panel" class="glass-panel" style="display: none; max-width: 800px; margin: 0 auto;">
+                    <div class="card-header" style="border-bottom: 1px solid var(--card-border); padding-bottom:12px;">
+                        <h3><i class="fa-solid fa-circle-info" style="color:var(--blue);"></i> Batch Information</h3>
+                        <span class="glass-pill pill-blue" id="res-status">STATUS</span>
+                    </div>
+                    <div style="padding: 20px 0; display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div>
+                            <p style="font-size:12px; color:var(--text-muted);">Product Name</p>
+                            <strong id="res-product-name" style="font-size:16px; color:var(--text-heading);">--</strong>
+                        </div>
+                        <div>
+                            <p style="font-size:12px; color:var(--text-muted);">Batch Reference ID</p>
+                            <strong id="res-batch-id" style="font-family:monospace; font-size:15px; color:var(--text-heading);">--</strong>
+                        </div>
+                        <div>
+                            <p style="font-size:12px; color:var(--text-muted);">Route / Destination</p>
+                            <span id="res-route" style="font-size:14px;">--</span>
+                        </div>
+                        <div>
+                            <p style="font-size:12px; color:var(--text-muted);">Registered By</p>
+                            <span id="res-producer" style="font-size:14px;">--</span>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid var(--card-border); padding-top:16px; display:flex; gap:12px; justify-content: flex-end;">
+                        <button class="btn-distributor" onclick="prefillEvent('received')"><i class="fa-solid fa-circle-check"></i> Accept / Receive</button>
+                        <button class="btn-distributor" onclick="prefillEvent('transferred')"><i class="fa-solid fa-truck-arrow-right"></i> Transfer Out</button>
+                        <button class="btn-anomaly" onclick="prefillEvent('anomaly')"><i class="fa-solid fa-triangle-exclamation"></i> Flag Anomaly</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── SECTION: RECORD TRANSFER ── -->
+            <section id="sect-transfer" class="dashboard-content-section">
+                <div class="glass-panel" style="max-width: 800px; margin: 0 auto;">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-truck-ramp-box"></i> Record Logistics / Transfer Event</h2>
+                    </div>
+                    <form id="transfer-event-form" onsubmit="handleSubmitTransfer(event)">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="tx_batch_id">Batch ID *</label>
+                                <input type="text" id="tx_batch_id" class="form-control" placeholder="e.g. FC-001" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="tx_event_type">Event Type *</label>
+                                <select id="tx_event_type" class="form-control" onchange="toggleAnomalyField(this.value)" required>
+                                    <option value="received">Accept / Receive Batch</option>
+                                    <option value="transferred">Depart / Transfer Out</option>
+                                    <option value="checkpoint">Location Checkpoint</option>
+                                    <option value="anomaly">Flag Cold-Chain Anomaly</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="tx_location_name">Location / Facility Name</label>
+                                <input type="text" id="tx_location_name" class="form-control" placeholder="e.g. Hub 2 Center" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Live telemetry</label>
+                                <div class="form-control" style="color:var(--text-muted);">Attached automatically from the latest ESP32 reading for this batch.</div>
+                            </div>
+                        </div>
+                        <div class="form-group" id="anomaly-desc-group" style="display: none; margin-bottom: 16px;">
+                            <label for="tx_anomaly_desc" style="color:var(--red);">Anomaly / Cold-Chain Violation Details *</label>
+                            <textarea id="tx_anomaly_desc" class="form-control" rows="3" placeholder="Provide description of temp spikes, broken seal or spoiled cargo..."></textarea>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label for="tx_notes">Event Notes</label>
+                            <input type="text" id="tx_notes" class="form-control" placeholder="e.g. Inspected packaging, cold unit functioning properly.">
+                        </div>
+
+                        <div id="transfer-alert" class="alert-box" style="display: none;"></div>
+
+                        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                            <button type="button" class="btn-distributor" style="background: transparent; border: 1px solid var(--card-border); color: var(--text-heading);" onclick="showSection('overview')">Cancel</button>
+                            <button type="submit" class="btn-distributor">Sign Transfer and Submit</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- ── SECTION: ANOMALIES ── -->
+            <section id="sect-anomalies" class="dashboard-content-section">
+                <div class="glass-panel" style="max-width: 800px; margin: 0 auto;">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-triangle-exclamation" style="color:var(--red);"></i> Flag Cold-Chain Anomaly</h2>
+                    </div>
+                    <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Flag any temperature exceptions, delay issues, or packaging damage on the blockchain ledger instantly.</p>
+                    <form id="anomaly-event-form" onsubmit="handleSubmitAnomaly(event)">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="anom_batch_id">Batch ID *</label>
+                                <input type="text" id="anom_batch_id" class="form-control" placeholder="e.g. FC-001" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="anom_location">Location Facility *</label>
+                                <input type="text" id="anom_location" class="form-control" placeholder="e.g. Hub 2 Depot" required>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label for="anom_desc" style="color:var(--red);">Description of Anomaly / Issue *</label>
+                            <textarea id="anom_desc" class="form-control" rows="4" placeholder="Detail the cold-chain violation, visual observations or inspection failures..." required></textarea>
+                        </div>
+                        
+                        <div id="anomaly-alert" class="alert-box" style="display: none;"></div>
+
+                        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                            <button type="button" class="btn-distributor" style="background: transparent; border: 1px solid var(--card-border); color: var(--text-heading);" onclick="showSection('overview')">Cancel</button>
+                            <button type="submit" class="btn-anomaly">Submit Critical Alert</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- ── SECTION: TRANSFER HISTORY ── -->
+            <section id="sect-history" class="dashboard-content-section">
+                <div class="glass-panel">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-boxes-stacked"></i> Full Logistics History Log</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Event ID</th>
+                                    <th>Batch ID</th>
+                                    <th>Event Type</th>
+                                    <th>Location</th>
+                                    <th>Lat, Lng</th>
+                                    <th>Temp (°C)</th>
+                                    <th>Humidity (%)</th>
+                                    <th>Notes</th>
+                                    <th>Blockchain Hash / Transaction ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-transfers-table">
+                                <tr>
+                                    <td colspan="9" style="text-align: center; color: var(--text-muted);">Loading logs...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="distributor-modal-overlay" class="distributor-modal-overlay" hidden onclick="closeDistributorModal(event)">
+        <div class="distributor-modal" onclick="event.stopPropagation()">
+            <div class="card-header"><h2 id="distributor-modal-title">Shipment stage</h2><button type="button" onclick="closeDistributorModal()" style="border:0;background:transparent;color:var(--muted);font-size:18px;"><i class="fa-solid fa-xmark"></i></button></div>
+            <div class="distributor-modal-body" id="distributor-modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            initDate();
+            initUserProfile();
+            loadDistributorTransfers();
+            setInterval(tickClock, 1000);
+            
+        });
+
+        function initDate() {
+            const dateEl = document.getElementById('current-date');
+            if (dateEl) {
+                const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                dateEl.textContent = new Date().toLocaleDateString('en-GB', options);
+            }
+        }
+
+        function tickClock() {
+            const timeEl = document.getElementById('current-time');
+            if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('en-GB', { hour12: false });
+        }
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.dashboard-content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.sidebar-nav .nav-item').forEach(i => i.classList.remove('active'));
+            
+            document.getElementById(`sect-${sectionId}`).classList.add('active');
+            document.getElementById(`nav-${sectionId}`).classList.add('active');
+            
+            const titleEl = document.getElementById('dashboard-title');
+            const subtitleEl = document.getElementById('dashboard-subtitle');
+            
+            if (sectionId === 'overview') {
+                titleEl.textContent = 'Distributor Panel';
+                subtitleEl.textContent = 'Manage shipments, monitor cold-chain conditions, and record distribution events';
+                loadDistributorTransfers();
+            } else if (sectionId === 'search') {
+                titleEl.textContent = 'Search / Scan Batch';
+                subtitleEl.textContent = 'Search or scan any registered production batch';
+            } else if (sectionId === 'transfer') {
+                titleEl.textContent = 'Record Transfer';
+                subtitleEl.textContent = 'Record custody and logistics events; live telemetry attaches automatically';
+            } else if (sectionId === 'anomalies') {
+                titleEl.textContent = 'Flag Anomaly';
+                subtitleEl.textContent = 'Submit critical alerts for cold chain violations';
+            } else if (sectionId === 'history') {
+                titleEl.textContent = 'Transfer History';
+                subtitleEl.textContent = 'Detailed transaction history for your node';
+                loadDistributorTransfers();
+            }
+        }
+
+        let myTransfers = [];
+        function setDistributorConnection(isOnline) {
+            const status = document.getElementById('connection-status');
+            const dot = document.getElementById('connection-dot');
+            if (status) status.textContent = isOnline ? 'Online' : 'Offline preview';
+            if (dot) {
+                dot.classList.toggle('dot-blue', isOnline);
+                dot.classList.toggle('dot-amber', !isOnline);
+            }
+        }
+
+        function distributorApiUrl(path) {
+            return window.FoodChainAPI && FoodChainAPI.resolveApiUrl ? FoodChainAPI.resolveApiUrl(path) : path;
+        }
+
+        async function loadDistributorTransfers() {
+            try {
+                const res = await fetchWithAuth(distributorApiUrl('/api/distributor/transfers'));
+                if (res.ok) {
+                    setDistributorConnection(true);
+                    const payload = await res.json();
+                    // Backend returns an object such as { transfers: [...] }.
+                    // Keep compatibility with a direct array response too.
+                    myTransfers = Array.isArray(payload) ? payload : (
+                        Array.isArray(payload?.transfers) ? payload.transfers :
+                        Array.isArray(payload?.data) ? payload.data : []
+                    );
+                    populateTransfersTables();
+                    updateStats();
+                    const sensorRes = await fetch(distributorApiUrl('/data'));
+                    if (sensorRes.ok) {
+                        const sensorData = await sensorRes.json();
+                        const devices = new Set((sensorData.data || []).map(record => record.device_id || record.sensor_id).filter(Boolean));
+                        const deviceEl = document.getElementById('stat-iot-devices');
+                        if (deviceEl) deviceEl.textContent = devices.size;
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load transfers:', err);
+                setDistributorConnection(false);
+            }
+        }
+
+        function updateStats() {
+            const anomalies = myTransfers.filter(t => t.event_type === 'anomaly');
+            const counts = { incoming: 0, accepted: 0, transit: 0, distributor: 0, delivered: 0 };
+            myTransfers.forEach(t => {
+                const type = String(t.event_type || '').toLowerCase();
+                if (type === 'received' || type === 'incoming') counts.incoming++;
+                else if (type === 'accepted') counts.accepted++;
+                else if (type === 'transferred' || type === 'checkpoint') counts.transit++;
+                else if (type === 'delivered') counts.delivered++;
+                else counts.distributor++;
+            });
+            const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+            setText('stat-incoming', counts.incoming);
+            setText('stat-active', counts.transit + counts.distributor);
+            setText('stat-delivered', counts.delivered);
+            setText('stat-delayed', myTransfers.filter(t => /delay/i.test(`${t.event_type} ${t.notes || ''}`)).length);
+            setText('stat-condition-alerts', anomalies.length);
+            setText('stat-iot-devices', new Set(myTransfers.map(t => t.device_id).filter(Boolean)).size);
+            Object.keys(counts).forEach(stage => setText(`flow-${stage}`, counts[stage]));
+        }
+
+        function openDistributionStage(stage) {
+            const labels = { incoming: 'Incoming', accepted: 'Accepted', transit: 'In Transit', distributor: 'At Distributor', delivered: 'Delivered' };
+            const matches = myTransfers.filter(t => {
+                const type = String(t.event_type || '').toLowerCase();
+                if (stage === 'incoming') return type === 'received' || type === 'incoming';
+                if (stage === 'accepted') return type === 'accepted';
+                if (stage === 'transit') return type === 'transferred' || type === 'checkpoint';
+                if (stage === 'delivered') return type === 'delivered';
+                return !['received','incoming','accepted','transferred','checkpoint','delivered'].includes(type);
+            });
+            document.getElementById('distributor-modal-title').textContent = `${labels[stage]} · ${matches.length} shipments`;
+            document.getElementById('distributor-modal-body').innerHTML = matches.length
+                ? matches.map(t => `<div class="shipment-row"><strong>${t.batch_id || '-'}</strong><span>${t.location_name || '-'}</span><small>${t.event_type || '-'}</small><small>${(t.created_at || '').replace('T',' ').substring(0,16)}</small><button class="btn-distributor" type="button" style="padding:6px 9px;font-size:11px;" onclick="showSection('search');document.getElementById('search-batch-id').value='${t.batch_id || ''}';handleBatchSearch();">View</button></div>`).join('')
+                : '<p style="color:var(--muted);">No shipments are currently in this stage.</p>';
+            document.getElementById('distributor-modal-overlay').hidden = false;
+        }
+
+        function closeDistributorModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('distributor-modal-overlay').hidden = true;
+        }
+        document.addEventListener('keydown', event => { if (event.key === 'Escape') closeDistributorModal(); });
+
+        function populateTransfersTables() {
+            const table1 = document.getElementById('overview-transfers-table');
+            const table2 = document.getElementById('history-transfers-table');
+            
+            if (!myTransfers.length) {
+                const emptyRow = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">No logistics events recorded yet.</td></tr>`;
+                if (table1) table1.innerHTML = emptyRow;
+                if (table2) table2.innerHTML = emptyRow;
+                return;
+            }
+            
+            const rows1 = myTransfers.slice(0, 10).map(t => `
+                <tr>
+                    <td>#${t.id}</td>
+                    <td><strong>${t.batch_id}</strong></td>
+                    <td><span class="glass-pill pill-${t.event_type === 'anomaly' ? 'crit' : 'blue'}">${t.event_type.toUpperCase()}</span></td>
+                    <td>${t.location_name || '-'}</td>
+                    <td>${t.temperature !== null ? t.temperature + '°C / ' + t.humidity + '%' : '-'}</td>
+                    <td>${t.created_at.substring(0, 16).replace('T', ' ')}</td>
+                    <td><span style="color:var(--green); font-weight:600;"><i class="fa-solid fa-circle-check"></i> Fabric Confirmed</span></td>
+                </tr>
+            `).join('');
+            
+            const rows2 = myTransfers.map(t => `
+                <tr>
+                    <td>#${t.id}</td>
+                    <td><strong>${t.batch_id}</strong></td>
+                    <td><span class="glass-pill pill-${t.event_type === 'anomaly' ? 'crit' : 'blue'}">${t.event_type.toUpperCase()}</span></td>
+                    <td>${t.location_name || '-'}</td>
+                    <td>${t.latitude ? t.latitude.toFixed(4) + ', ' + t.longitude.toFixed(4) : '-'}</td>
+                    <td>${t.temperature !== null ? t.temperature + '°C' : '-'}</td>
+                    <td>${t.humidity !== null ? t.humidity + '%' : '-'}</td>
+                    <td>${t.notes || t.anomaly_description || '-'}</td>
+                    <td><small style="font-family:monospace; font-size:10px; color:var(--text-muted);">${t.blockchain_tx_id || 'Verified local hash chain'}</small></td>
+                </tr>
+            `).join('');
+            
+            if (table1) table1.innerHTML = rows1;
+            if (table2) table2.innerHTML = rows2;
+        }
+
+        async function handleBatchSearch() {
+            const batchId = document.getElementById('search-batch-id').value.trim();
+            const alertBox = document.getElementById('search-alert');
+            const resPanel = document.getElementById('search-results-panel');
+            
+            alertBox.style.display = 'none';
+            resPanel.style.display = 'none';
+            
+            if (!batchId) {
+                alertBox.textContent = 'Please enter a valid batch ID first.';
+                alertBox.className = 'alert-box error';
+                alertBox.style.display = 'block';
+                return;
+            }
+            
+            try {
+                const res = await fetchWithAuth(distributorApiUrl(`/api/distributor/batches/${encodeURIComponent(batchId)}`));
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    document.getElementById('res-product-name').textContent = data.batch_info ? data.batch_info.product_name : (data.latest_iot ? data.latest_iot.product_name : 'Replay Batch');
+                    document.getElementById('res-batch-id').textContent = data.batch_id;
+                    document.getElementById('res-route').textContent = data.batch_info ? `${data.batch_info.origin} ➔ ${data.batch_info.destination}` : 'Demo Route';
+                    document.getElementById('res-producer').textContent = data.batch_info ? data.batch_info.created_by : 'System (Demo)';
+                    
+                    const statusPill = document.getElementById('res-status');
+                    const statusStr = data.batch_info ? data.batch_info.status.toUpperCase() : (data.latest_iot ? data.latest_iot.status.toUpperCase() : 'IN TRANSIT');
+                    statusPill.textContent = statusStr;
+                    statusPill.className = `glass-pill pill-${statusStr === 'CREATED' ? 'green' : 'blue'}`;
+                    
+                    resPanel.style.display = 'block';
+                } else {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Batch not found.');
+                }
+            } catch (err) {
+                alertBox.textContent = err.message || 'Error executing search.';
+                alertBox.className = 'alert-box error';
+                alertBox.style.display = 'block';
+            }
+        }
+
+        function prefillEvent(type) {
+            const batchId = document.getElementById('res-batch-id').textContent;
+            showSection('transfer');
+            
+            document.getElementById('tx_batch_id').value = batchId;
+            document.getElementById('tx_event_type').value = type;
+            
+            if (type === 'anomaly') {
+                showSection('anomalies');
+                document.getElementById('anom_batch_id').value = batchId;
+            }
+        }
+
+        function toggleAnomalyField(val) {
+            document.getElementById('anomaly-desc-group').style.display = val === 'anomaly' ? 'flex' : 'none';
+        }
+
+        async function handleSubmitTransfer(event) {
+            event.preventDefault();
+            const alertBox = document.getElementById('transfer-alert');
+            alertBox.style.display = 'none';
+            
+            const payload = {
+                batch_id: document.getElementById('tx_batch_id').value.trim(),
+                event_type: document.getElementById('tx_event_type').value,
+                location_name: document.getElementById('tx_location_name').value.trim(),
+                notes: document.getElementById('tx_notes').value.trim(),
+                anomaly_description: document.getElementById('tx_event_type').value === 'anomaly' ? document.getElementById('tx_anomaly_desc').value.trim() : null
+            };
+            
+            try {
+                const res = await fetchWithAuth(distributorApiUrl('/api/distributor/transfers'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    alertBox.textContent = 'Transfer event successfully signed and committed to Hyperledger Fabric!';
+                    alertBox.className = 'alert-box success';
+                    alertBox.style.display = 'block';
+                    document.getElementById('transfer-event-form').reset();
+                    loadDistributorTransfers();
+                    setTimeout(() => showSection('overview'), 1500);
+                } else {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Failed to submit transfer event');
+                }
+            } catch (err) {
+                alertBox.textContent = err.message || 'Server error recording transfer.';
+                alertBox.className = 'alert-box error';
+                alertBox.style.display = 'block';
+            }
+        }
+
+        async function handleSubmitAnomaly(event) {
+            event.preventDefault();
+            const alertBox = document.getElementById('anomaly-alert');
+            alertBox.style.display = 'none';
+            
+            const payload = {
+                batch_id: document.getElementById('anom_batch_id').value.trim(),
+                event_type: 'anomaly',
+                location_name: document.getElementById('anom_location').value.trim(),
+                anomaly_description: document.getElementById('anom_desc').value.trim()
+            };
+            
+            try {
+                const res = await fetchWithAuth(distributorApiUrl('/api/distributor/transfers'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    alertBox.textContent = 'Anomaly alert successfully broadcast and logged onto ledger!';
+                    alertBox.className = 'alert-box success';
+                    alertBox.style.display = 'block';
+                    document.getElementById('anomaly-event-form').reset();
+                    loadDistributorTransfers();
+                    setTimeout(() => showSection('overview'), 1500);
+                } else {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Failed to broadcast anomaly alert');
+                }
+            } catch (err) {
+                alertBox.textContent = err.message || 'Server error reporting anomaly.';
+                alertBox.className = 'alert-box error';
+                alertBox.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>

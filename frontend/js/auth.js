@@ -63,3 +63,18 @@ async function fetchWithAuth(url, options = {}) {
     throw err;
   }
 }
+
+function redirectByRole() {
+  const role = getRole();
+  if (role === 'admin') {
+    window.location.href = 'admin-dashboard.html';
+  } else if (role === 'manager') {
+    window.location.href = 'business-dashboard.html';
+  } else if (role === 'producer') {
+    window.location.href = 'producer-dashboard.html';
+  } else if (role === 'distributor') {
+    window.location.href = 'distributor-dashboard.html';
+  } else {
+    window.location.href = 'login.html';
+  }
+}

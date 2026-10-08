@@ -1,296 +1,1142 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FoodChain — Food Chain Supply Portal</title>
-    <meta name="description" content="FoodChain: Blockchain-secured food supply chain. Track farm-to-fork journeys in real time with IoT sensors and immutable ledger verification.">
-    <link rel="stylesheet" href="css/variables.css">
-    <link rel="stylesheet" href="css/glassmorphism.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
-    <script src="js/auth.js" defer></script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: var(--font-main); color: var(--text-body); min-height: 100vh;
-            background: radial-gradient(ellipse 60% 45% at 15% 10%, rgba(34,197,94,0.13) 0%, transparent 55%),
-                radial-gradient(ellipse 55% 40% at 85% 90%, rgba(59,130,246,0.1) 0%, transparent 50%),
-                var(--bg-page);
-            transition: background 0.35s ease, color 0.35s ease; overflow-x: hidden; }
-        [data-theme="light"] body { background: radial-gradient(ellipse 60% 45% at 15% 10%, rgba(34,197,94,0.08) 0%, transparent 55%), radial-gradient(ellipse 55% 40% at 85% 90%, rgba(59,130,246,0.07) 0%, transparent 50%), var(--bg-page); }
-        .bg-blob { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.45; pointer-events: none; z-index: 0; }
-        .blob-1 { width: 420px; height: 420px; background: rgba(34,197,94,0.12); top: -100px; left: -100px; }
-        .blob-2 { width: 360px; height: 360px; background: rgba(59,130,246,0.1); bottom: 80px; right: -80px; }
-        [data-theme="light"] .bg-blob { opacity: 0.2; }
-        main { position: relative; z-index: 1; }
-        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 68px; background: var(--card-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--card-border); }
-        .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-        .brand-icon { width: 52px; height: 52px; background: linear-gradient(135deg, #22c55e, #15803d); border-radius: 12px; display: grid; place-items: center; font-size: 20px; color: #fff; box-shadow: 0 8px 20px rgba(34,197,94,0.35); }
-        .brand-text strong { display: block; font-family: var(--font-heading); font-size: 19px; font-weight: 700; color: var(--text-heading); line-height: 1.1; }
-        .brand-text span { font-size: 11px; color: var(--text-muted); }
-        .nav-links { display: flex; align-items: center; gap: 8px; }
-        .nav-link { padding: 8px 16px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 500; color: var(--text-muted); transition: all 0.2s ease; }
-        .nav-link:hover { color: var(--text-heading); background: rgba(34,197,94,0.08); }
-        .nav-link.active { color: #16a34a; font-weight: 600; }
-        [data-theme="light"] .nav-link.active { color: #4ade80; }
-        .nav-btn { padding: 9px 20px; background: linear-gradient(135deg, #22c55e, #15803d); color: #fff; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; box-shadow: 0 4px 14px rgba(34,197,94,0.3); transition: transform 0.2s, box-shadow 0.2s; display: inline-flex; align-items: center; gap: 8px; }
-        .nav-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(34,197,94,0.4); }
-        .nav-theme-btn { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--card-bg); backdrop-filter: blur(10px); cursor: pointer; display: grid; place-items: center; font-size: 17px; color: var(--text-muted); transition: all 0.2s ease; }
-        .nav-theme-btn:hover { color: var(--text-heading); border-color: rgba(34,197,94,0.4); }
-        .hero { padding: 160px 40px 80px; text-align: center; }
-        .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 18px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); border-radius: 999px; font-size: 13px; font-weight: 600; color: #16a34a; margin-bottom: 28px; animation: fadeSlide 0.7s ease both; }
-        [data-theme="light"] .hero-badge { color: #4ade80; }
-        .hero h1 { font-family: var(--font-heading); font-size: clamp(38px, 5.5vw, 68px); font-weight: 800; color: var(--text-heading); line-height: 1.1; letter-spacing: -1.5px; margin-bottom: 22px; animation: fadeSlide 0.8s 0.1s ease both; }
-        .hero h1 .grad { background: linear-gradient(135deg, #22c55e, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .hero p { max-width: 620px; margin: 0 auto 36px; font-size: 17px; line-height: 1.7; color: var(--text-muted); animation: fadeSlide 0.9s 0.15s ease both; }
-        .hero-actions { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; animation: fadeSlide 1s 0.2s ease both; }
-        .abstract-nodes { position: absolute; inset: 0; z-index: -1; opacity: 0.2; background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 40px 40px; overflow: hidden; pointer-events: none; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%); }
-        [data-theme="light"] .abstract-nodes { background-image: radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px); }
-        .abstract-nodes svg { position: absolute; width: 100%; height: 100%; animation: floatSlow 20s ease-in-out infinite alternate; }
-        @keyframes floatSlow { from { transform: translateY(0) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
-        .btn-primary { display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; background: linear-gradient(135deg, #22c55e, #15803d); color: #fff; border-radius: 14px; text-decoration: none; font-size: 15px; font-weight: 700; box-shadow: 0 8px 24px rgba(34,197,94,0.35); transition: transform 0.25s, box-shadow 0.25s; }
-        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(34,197,94,0.45); }
-        .btn-outline { display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; background: var(--card-bg); backdrop-filter: blur(12px); color: var(--text-heading); border: 1px solid var(--card-border); border-radius: 14px; text-decoration: none; font-size: 15px; font-weight: 600; transition: all 0.25s; }
-        .btn-outline:hover { border-color: rgba(34,197,94,0.5); box-shadow: 0 8px 24px rgba(34,197,94,0.12); transform: translateY(-2px); }
-        .stats-ribbon { display: flex; justify-content: center; flex-wrap: wrap; gap: 0; margin: 0 40px 60px; }
-        .stat-chip { flex: 1; min-width: 190px; max-width: 270px; padding: 30px 24px; border: 1px solid var(--card-border); background: var(--card-bg); backdrop-filter: blur(16px); text-align: center; transition: all 0.3s ease; }
-        .stat-chip:first-child { border-radius: 20px 0 0 20px; }
-        .stat-chip:last-child { border-radius: 0 20px 20px 0; }
-        .stat-chip:not(:last-child) { border-right: none; }
-        .stat-chip:hover { transform: translateY(-4px); z-index: 1; box-shadow: 0 20px 40px rgba(0,0,0,0.08); border-color: rgba(34,197,94,0.35); }
-        .stat-number { font-family: var(--font-heading); font-size: 40px; font-weight: 800; background: linear-gradient(135deg, #22c55e, #15803d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1; margin-bottom: 8px; }
-        .stat-label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
-        .trust-bar { display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap; padding: 24px 40px; border-top: 1px solid var(--card-border); border-bottom: 1px solid var(--card-border); }
-        .trust-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); }
-        .trust-item i { color: #22c55e; }
-        .section-block { padding: 80px 40px; }
-        .section-header { text-align: center; margin-bottom: 52px; }
-        .section-tag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; }
-        .section-header h2 { font-family: var(--font-heading); font-size: clamp(26px, 3.5vw, 40px); font-weight: 800; color: var(--text-heading); letter-spacing: -0.5px; }
-        .portal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 24px; max-width: 1100px; margin: 0 auto; }
-        .portal-card { border-radius: 24px; padding: 34px 30px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--card-border); box-shadow: var(--card-shadow); text-decoration: none; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; gap: 20px; position: relative; overflow: hidden; }
-        .portal-card:hover { transform: translateY(-8px); box-shadow: 0 32px 60px rgba(0,0,0,0.12); }
-        .card-icon-ring { width: 66px; height: 66px; border-radius: 18px; display: grid; place-items: center; font-size: 30px; }
-        .icon-green { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25); }
-        .icon-blue { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.25); }
-        .icon-amber { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); }
-        .card-body h3 { font-family: var(--font-heading); font-size: 21px; font-weight: 700; color: var(--text-heading); margin-bottom: 10px; }
-        .card-body p { font-size: 14px; color: var(--text-muted); line-height: 1.65; }
-        .card-features { display: flex; flex-direction: column; gap: 8px; }
-        .feat-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted); }
-        .feat-row i { font-size: 12px; width: 20px; text-align: center; }
-        .c-green { color: #22c55e; } .c-blue { color: #3b82f6; } .c-amber { color: #f59e0b; }
-        .card-cta { display: flex; align-items: center; justify-content: space-between; padding-top: 16px; border-top: 1px solid var(--card-border); }
-        .cta-text { font-size: 14px; font-weight: 600; }
-        .cta-arrow { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-size: 14px; transition: transform 0.2s; }
-        .portal-card:hover .cta-arrow { transform: translateX(4px); }
-        .cta-green { color: #16a34a; } .cta-blue { color: #2563eb; } .cta-amber { color: #d97706; }
-        .cta-ring-green { background: rgba(34,197,94,0.12); color: #22c55e; }
-        .cta-ring-blue { background: rgba(59,130,246,0.12); color: #3b82f6; }
-        .cta-ring-amber { background: rgba(245,158,11,0.12); color: #f59e0b; }
-        [data-theme="light"] .cta-green { color: #4ade80; } [data-theme="dark"] .cta-blue { color: #60a5fa; } [data-theme="dark"] .cta-amber { color: #fbbf24; }
-        .tech-section { padding: 80px 40px; background: var(--card-bg); backdrop-filter: blur(20px); border-top: 1px solid var(--card-border); border-bottom: 1px solid var(--card-border); }
-        .tech-grid { max-width: 1100px; margin: 48px auto 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 14px; }
-        .tech-chip { display: flex; align-items: center; gap: 14px; padding: 18px 20px; border: 1px solid var(--card-border); border-radius: 16px; background: var(--bg-page); transition: all 0.25s; }
-        .tech-chip:hover { border-color: rgba(34,197,94,0.4); transform: translateY(-2px); }
-        .tech-icon { width: 40px; height: 40px; border-radius: 10px; background: rgba(34,197,94,0.1); display: grid; place-items: center; font-size: 20px; }
-        .tech-text strong { display: block; font-size: 14px; font-weight: 700; color: var(--text-heading); }
-        .tech-text span { font-size: 12px; color: var(--text-muted); }
-        footer { padding: 48px 40px; text-align: center; color: var(--text-muted); font-size: 14px; display: flex; flex-direction: column; gap: 8px; }
-        footer a { color: #22c55e; text-decoration: none; }
-        footer a:hover { text-decoration: underline; }
-        @keyframes fadeSlide { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
-        @media (max-width: 768px) {
-            nav { padding: 0 16px; }
-            .hero { padding: 120px 20px 60px; }
-            .stats-ribbon { margin: 0 20px 50px; }
-            .stat-chip:first-child { border-radius: 16px 16px 0 0; }
-            .stat-chip:last-child { border-radius: 0 0 16px 16px; }
-            .stat-chip:not(:last-child) { border-right: 1px solid var(--card-border); border-bottom: none; }
-            .section-block, .tech-section { padding: 60px 20px; }
-        }
-    </style>
-</head>
-<body>
-    <div class="bg-blob blob-1"></div>
-    <div class="bg-blob blob-2"></div>
 
-    <nav>
-        <a href="home.html" class="nav-brand">
-            <div class="brand-icon" style="background:transparent; box-shadow:none;">
-                <img src="images/logo.png" alt="FoodChain Logo" style="width:100%;height:100%;object-fit:contain;">
-            </div>
-            <div class="brand-text">
-                <strong>FoodChain</strong>
-                <span>Food Supply Chain</span>
-            </div>
+    <title>FoodChain — From Farm to Fork, Verified</title>
+
+    <meta
+        name="description"
+        content="FoodChain connects IoT monitoring, GPS traceability, QR verification and Hyperledger Fabric to make the food supply chain transparent and trustworthy."
+    >
+
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/home.css">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        crossorigin="anonymous"
+    >
+
+    <script src="js/auth.js" defer></script>
+</head>
+
+<body>
+
+<!-- =========================================================
+     HEADER
+========================================================= -->
+
+<header class="site-header">
+
+    <a class="brand" href="home.html" aria-label="FoodChain home">
+        <span class="brand-mark">
+            <img src="images/logo.png" alt="FoodChain">
+        </span>
+
+        <span class="brand-copy">
+            <strong>FoodChain</strong>
+            <small>IoT &amp; Blockchain</small>
+        </span>
+    </a>
+
+    <nav class="main-nav" aria-label="Primary navigation">
+
+        <a class="nav-link active" href="home.html">
+            Home
         </a>
-        <div class="nav-links">
-            <a href="home.html" class="nav-link active">Home</a>
-            <a href="dashboard.html" class="nav-link">Dashboard</a>
-            <a href="track.html" class="nav-link">Track</a>
-            <a href="qr.html" class="nav-link">QR</a>
-            <button class="nav-theme-btn" onclick="toggleTheme()" title="Toggle Theme">
-                <span id="theme-icon">🌙</span>
-            </button>
-            <a href="login.html" class="nav-btn">
-                <i class="fa-solid fa-shield-halved"></i> Secure Login
-            </a>
-        </div>
+
+        <a class="nav-link" href="track.html">
+            Track Food
+        </a>
+
+        <a class="nav-link" href="#about">
+            About
+        </a>
+
+        <button
+            class="theme-toggle"
+            type="button"
+            onclick="toggleTheme()"
+            aria-label="Toggle color theme"
+            title="Toggle theme"
+        >
+            <i id="theme-icon" class="fa-solid fa-moon" aria-hidden="true"></i>
+        </button>
+
+        <a class="enterprise-link" href="login.html">
+            Enterprise Access
+            <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+        </a>
+
     </nav>
 
-    <main>
-        <section class="hero" style="position: relative;">
-            <div class="abstract-nodes">
-                <svg viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-                    <path d="M100 100 L300 250 L200 450 L500 350 L700 500 L650 200 L450 150 Z" stroke="rgba(34,197,94,0.3)" stroke-width="2" stroke-linejoin="round"/>
-                    <circle cx="100" cy="100" r="6" fill="#22c55e" opacity="0.8"/>
-                    <circle cx="300" cy="250" r="8" fill="#3b82f6" opacity="0.8"/>
-                    <circle cx="200" cy="450" r="5" fill="#eab308" opacity="0.8"/>
-                    <circle cx="500" cy="350" r="10" fill="#22c55e" opacity="0.8"/>
-                    <circle cx="700" cy="500" r="6" fill="#3b82f6" opacity="0.8"/>
-                    <circle cx="650" cy="200" r="7" fill="#eab308" opacity="0.8"/>
-                    <circle cx="450" cy="150" r="5" fill="#22c55e" opacity="0.8"/>
-                </svg>
-            </div>
-            <div class="hero-badge">
-                <span class="pulse-dot dot-green"></span>
-                Blockchain-Secured &bull; IoT Enabled &bull; Farm to Fork
-            </div>
-            <h1>Transparent Food Supply<br>Chain <span class="grad">Intelligence</span></h1>
-            <p>FoodChain combines IoT sensor networks with Hyperledger Fabric blockchain to deliver real-time, tamper-proof traceability across every stage of the food supply chain.</p>
-            <div class="hero-actions">
-                <a href="login.html" class="btn-primary">
-                    <i class="fa-solid fa-rocket"></i> Enter Portal
-                </a>
-                <a href="track.html" class="btn-outline">
-                    <i class="fa-solid fa-magnifying-glass"></i> Track a Product
-                </a>
-            </div>
-        </section>
+</header>
 
-        <div class="stats-ribbon">
-            <div class="stat-chip">
-                <div class="stat-number" id="sn1">1,240+</div>
-                <div class="stat-label">Batches Tracked</div>
-            </div>
-            <div class="stat-chip">
-                <div class="stat-number" id="sn2">98.7%</div>
-                <div class="stat-label">Compliance Rate</div>
-            </div>
-            <div class="stat-chip">
-                <div class="stat-number" id="sn3">5</div>
-                <div class="stat-label">Supply Chain Stages</div>
-            </div>
-            <div class="stat-chip">
-                <div class="stat-number">24/7</div>
-                <div class="stat-label">IoT Monitoring</div>
-            </div>
+
+<main>
+
+<!-- =========================================================
+     HERO
+========================================================= -->
+
+<section class="hero" aria-labelledby="hero-title">
+
+    <div class="hero-copy">
+
+        <div class="hero-kicker">
+            <span class="pulse-dot"></span>
+            Smart food supply-chain traceability
         </div>
 
-        <div class="trust-bar">
-            <div class="trust-item"><i class="fa-solid fa-shield-halved"></i> SHA-256 Hash Chain</div>
-            <div class="trust-item"><i class="fa-solid fa-lock"></i> JWT Authentication</div>
-            <div class="trust-item"><i class="fa-solid fa-tower-broadcast"></i> MQTT IoT Protocol</div>
-            <div class="trust-item"><i class="fa-solid fa-link"></i> Hyperledger Fabric</div>
-            <div class="trust-item"><i class="fa-solid fa-database"></i> SQLite WAL Engine</div>
+        <h1 id="hero-title">
+            From <em>farm</em> to fork,
+            <span>every step you can verify.</span>
+        </h1>
+
+        <p class="hero-intro">
+            FoodChain connects IoT sensors, GPS tracking, QR verification
+            and Hyperledger Fabric to create a transparent digital journey
+            for every food batch.
+        </p>
+
+        <div class="hero-actions">
+
+            <a class="button button-primary" href="track.html">
+                <span>Track a Batch</span>
+                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </a>
+
+            <a class="hero-secondary" href="login.html">
+                Enterprise Access
+                <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+            </a>
+
         </div>
 
-        <section class="section-block">
-            <div class="section-header">
-                <div class="section-tag">Role-Based Access</div>
-                <h2>Your Gateway to the Supply Chain</h2>
-            </div>
-            <div class="portal-grid">
-                <a href="login.html" class="portal-card">
-                    <div class="card-icon-ring icon-green">🌾</div>
-                    <div class="card-body">
-                        <h3>Farmer / Harvester</h3>
-                        <p>Register new crop batches, log IoT telemetry from your sensors, and certify produce origin on the blockchain.</p>
-                    </div>
-                    <div class="card-features">
-                        <div class="feat-row"><i class="fa-solid fa-circle-check c-green"></i> Batch registration &amp; harvest logging</div>
-                        <div class="feat-row"><i class="fa-solid fa-circle-check c-green"></i> Real-time DHT22 temperature sync</div>
-                        <div class="feat-row"><i class="fa-solid fa-circle-check c-green"></i> GPS location tagging (Neo-6M)</div>
-                        <div class="feat-row"><i class="fa-solid fa-circle-check c-green"></i> Hyperledger transaction commit</div>
-                    </div>
-                    <div class="card-cta">
-                        <span class="cta-text cta-green">Enter Farmer Portal</span>
-                        <div class="cta-arrow cta-ring-green"><i class="fa-solid fa-arrow-right"></i></div>
-                    </div>
-                </a>
-                <a href="dashboard.html" class="portal-card">
-                    <div class="card-icon-ring icon-blue">🏭</div>
-                    <div class="card-body">
-                        <h3>Admin / Retailer</h3>
-                        <p>Monitor the full supply chain dashboard, audit blockchain ledger integrity, and manage shipment batches end-to-end.</p>
-                    </div>
-                    <div class="card-features">
-                        <div class="feat-row"><i class="fa-solid fa-circle-check c-blue"></i> Full admin console &amp; analytics</div>
-                        <div class="feat-row"><i class="fa-solid fa-circle-check c-blue"></i> Blockchain ledger audit tools</div>
-                        <div class="feat-row"><i class="fa-solid fa-circle-check c-blue"></i> IoT edge anomaly dashboard</div>
-                        <div class="feat-row"><i class="fa-solid fa-circle-check c-blue"></i> QR label generation</div>
-                    </div>
-                    <div class="card-cta">
-                        <span class="cta-text cta-blue">Enter Admin Console</span>
-                        <div class="cta-arrow cta-ring-blue"><i class="fa-solid fa-arrow-right"></i></div>
-                    </div>
-                </a>
-                <a href="track.html" class="portal-card">
-                    <div class="card-icon-ring icon-amber">🛒</div>
-                    <div class="card-body">
-                        <h3>Consumer / Public</h3>
-                        <p>Scan or enter a product ID to trace its entire journey — from harvest through cold storage to your local supermarket.</p>
-                    </div>
-                    <div class="card-features">
-                        <div class="feat-row"><i class="fa-solid fa-circle-check c-amber"></i> Full journey trace (farm to fork)</div>
-                        <div class="feat-row"><i class="fa-solid fa-circle-check c-amber"></i> QR code scan verification</div>
-                        <div class="feat-row"><i class="fa-solid fa-circle-check c-amber"></i> Temperature &amp; humidity history</div>
-                        <div class="feat-row"><i class="fa-solid fa-circle-check c-amber"></i> Blockchain authenticity proof</div>
-                    </div>
-                    <div class="card-cta">
-                        <span class="cta-text cta-amber">Track a Product</span>
-                        <div class="cta-arrow cta-ring-amber"><i class="fa-solid fa-arrow-right"></i></div>
-                    </div>
-                </a>
-            </div>
-        </section>
+        <div class="hero-trust">
 
-        <section class="tech-section">
-            <div class="section-header">
-                <div class="section-tag">Technology Stack</div>
-                <h2>Built on Enterprise-Grade Infrastructure</h2>
-            </div>
-            <div class="tech-grid">
-                <div class="tech-chip"><div class="tech-icon">🔗</div><div class="tech-text"><strong>Hyperledger Fabric</strong><span>Permissioned blockchain</span></div></div>
-                <div class="tech-chip"><div class="tech-icon">📡</div><div class="tech-text"><strong>ESP32 + DHT22</strong><span>IoT edge sensors</span></div></div>
-                <div class="tech-chip"><div class="tech-icon">⚡</div><div class="tech-text"><strong>FastAPI Backend</strong><span>Python REST engine</span></div></div>
-                <div class="tech-chip"><div class="tech-icon">📨</div><div class="tech-text"><strong>Mosquitto MQTT</strong><span>Real-time telemetry</span></div></div>
-                <div class="tech-chip"><div class="tech-icon">🛡️</div><div class="tech-text"><strong>SHA-256 Hash Chain</strong><span>Tamper-proof records</span></div></div>
-                <div class="tech-chip"><div class="tech-icon">🗄️</div><div class="tech-text"><strong>SQLite WAL</strong><span>High-perf database</span></div></div>
-            </div>
-        </section>
-    </main>
+            <span>
+                <i class="fa-solid fa-shield-halved"></i>
+                Blockchain-backed records
+            </span>
 
-    <footer>
-        <div><strong style="color:var(--text-heading)">FoodChain / FoodChain</strong> — Supply Chain Management with IoT &amp; Blockchain</div>
+            <span>
+                <i class="fa-solid fa-satellite-dish"></i>
+                Real-time IoT telemetry
+            </span>
+
+            <span>
+                <i class="fa-solid fa-qrcode"></i>
+                Public QR verification
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         ARCHITECTURE VISUAL
+    ====================================================== -->
+
+    <div class="system-card">
+
+        <div class="system-card-header">
+
+            <div>
+                <span class="system-label">FOODCHAIN SYSTEM</span>
+                <strong>Digital Supply Chain</strong>
+            </div>
+
+            <span class="system-status">
+                <i class="fa-solid fa-circle"></i>
+                Connected
+            </span>
+
+        </div>
+
+
+        <div class="architecture">
+
+            <!-- Producer -->
+
+            <div class="architecture-node node-producer">
+
+                <div class="node-icon">
+                    <i class="fa-solid fa-wheat-awn"></i>
+                </div>
+
+                <div class="node-text">
+                    <strong>Producer</strong>
+                    <small>Batch origin</small>
+                </div>
+
+            </div>
+
+
+            <div class="architecture-line">
+                <span></span>
+            </div>
+
+
+            <!-- IoT -->
+
+            <div class="architecture-node node-iot">
+
+                <div class="node-icon">
+                    <i class="fa-solid fa-microchip"></i>
+                </div>
+
+                <div class="node-text">
+                    <strong>IoT Layer</strong>
+                    <small>ESP32 · DHT22 · GPS</small>
+                </div>
+
+            </div>
+
+
+            <div class="architecture-line">
+                <span></span>
+            </div>
+
+
+            <!-- MQTT -->
+
+            <div class="architecture-node node-mqtt">
+
+                <div class="node-icon">
+                    <i class="fa-solid fa-tower-broadcast"></i>
+                </div>
+
+                <div class="node-text">
+                    <strong>MQTT</strong>
+                    <small>Telemetry transport</small>
+                </div>
+
+            </div>
+
+
+            <div class="architecture-line">
+                <span></span>
+            </div>
+
+
+            <!-- Backend -->
+
+            <div class="architecture-node node-backend">
+
+                <div class="node-icon">
+                    <i class="fa-solid fa-server"></i>
+                </div>
+
+                <div class="node-text">
+                    <strong>FastAPI</strong>
+                    <small>Processing &amp; APIs</small>
+                </div>
+
+            </div>
+
+
+            <div class="architecture-line">
+                <span></span>
+            </div>
+
+
+            <!-- Storage -->
+
+            <div class="architecture-node node-storage">
+
+                <div class="node-icon">
+                    <i class="fa-solid fa-database"></i>
+                </div>
+
+                <div class="node-text">
+                    <strong>SQLite</strong>
+                    <small>Operational records</small>
+                </div>
+
+            </div>
+
+
+            <div class="architecture-line">
+                <span></span>
+            </div>
+
+
+            <!-- Blockchain -->
+
+            <div class="architecture-node node-blockchain">
+
+                <div class="node-icon">
+                    <i class="fa-solid fa-link"></i>
+                </div>
+
+                <div class="node-text">
+                    <strong>Hyperledger Fabric</strong>
+                    <small>Trusted ledger</small>
+                </div>
+
+            </div>
+
+
+            <div class="architecture-line">
+                <span></span>
+            </div>
+
+
+            <!-- Consumer -->
+
+            <div class="architecture-node node-consumer">
+
+                <div class="node-icon">
+                    <i class="fa-solid fa-qrcode"></i>
+                </div>
+
+                <div class="node-text">
+                    <strong>Consumer</strong>
+                    <small>Scan &amp; verify</small>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="system-footer">
+
+            <div>
+                <span>DATA FLOW</span>
+                <strong>Capture → Process → Record → Verify</strong>
+            </div>
+
+            <div class="ledger-badge">
+                <i class="fa-solid fa-shield-check"></i>
+                Tamper-evident
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================================================
+     TECHNOLOGY STRIP
+========================================================= -->
+
+<section class="technology-strip" aria-label="FoodChain technology stack">
+
+    <div class="technology-intro">
+        <span>BUILT WITH</span>
+    </div>
+
+    <div class="technology-items">
+
+        <span>
+            <i class="fa-solid fa-microchip"></i>
+            ESP32
+        </span>
+
+        <span>
+            <i class="fa-solid fa-temperature-half"></i>
+            IoT Sensors
+        </span>
+
+        <span>
+            <i class="fa-solid fa-tower-broadcast"></i>
+            MQTT
+        </span>
+
+        <span>
+            <i class="fa-solid fa-server"></i>
+            FastAPI
+        </span>
+
+        <span>
+            <i class="fa-solid fa-database"></i>
+            SQLite
+        </span>
+
+        <span>
+            <i class="fa-solid fa-link"></i>
+            Hyperledger Fabric
+        </span>
+
+        <span>
+            <i class="fa-solid fa-qrcode"></i>
+            QR Tracking
+        </span>
+
+    </div>
+
+</section>
+
+
+<!-- =========================================================
+     HOW IT WORKS
+========================================================= -->
+
+<section class="workflow-section">
+
+    <div class="section-heading">
+
         <div>
-            <a href="home.html">Home</a> &bull;
-            <a href="dashboard.html">Dashboard</a> &bull;
-            <a href="track.html">Track</a> &bull;
-            <a href="qr.html">QR Labels</a> &bull;
-            <a href="login.html">Login</a>
-        </div>
-        <div>&copy; 2026 FoodChain. Built with love for food safety.</div>
-    </footer>
+            <p class="eyebrow">How FoodChain works</p>
 
-    <script>
-        const html = document.documentElement;
-        const themeIcon = document.getElementById('theme-icon');
-        function applyTheme(t) { html.setAttribute('data-theme', t); themeIcon.textContent = t === 'dark' ? '☀️' : '🌙'; localStorage.setItem('ag-theme', t); }
-        function toggleTheme() { applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
-        applyTheme(localStorage.getItem('ag-theme') || 'dark');
-    </script>
+            <h2>
+                One connected journey.
+                <span>Four simple stages.</span>
+            </h2>
+        </div>
+
+        <p class="section-description">
+            Physical supply-chain events are connected to digital records,
+            making the journey easier to monitor, audit and verify.
+        </p>
+
+    </div>
+
+
+    <div class="workflow-grid">
+
+        <article class="workflow-card">
+
+            <div class="workflow-number">01</div>
+
+            <div class="workflow-icon">
+                <i class="fa-solid fa-satellite-dish"></i>
+            </div>
+
+            <h3>Capture</h3>
+
+            <p>
+                ESP32 devices collect environmental and location data
+                from the physical supply chain.
+            </p>
+
+            <span class="workflow-tag">
+                IoT telemetry
+            </span>
+
+        </article>
+
+
+        <article class="workflow-card">
+
+            <div class="workflow-number">02</div>
+
+            <div class="workflow-icon">
+                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+            </div>
+
+            <h3>Transmit</h3>
+
+            <p>
+                Sensor readings travel through MQTT into the FoodChain
+                backend for processing and storage.
+            </p>
+
+            <span class="workflow-tag">
+                MQTT
+            </span>
+
+        </article>
+
+
+        <article class="workflow-card">
+
+            <div class="workflow-number">03</div>
+
+            <div class="workflow-icon">
+                <i class="fa-solid fa-link"></i>
+            </div>
+
+            <h3>Secure</h3>
+
+            <p>
+                Supply-chain transactions are recorded through
+                Hyperledger Fabric for tamper-evident verification.
+            </p>
+
+            <span class="workflow-tag">
+                Blockchain
+            </span>
+
+        </article>
+
+
+        <article class="workflow-card">
+
+            <div class="workflow-number">04</div>
+
+            <div class="workflow-icon">
+                <i class="fa-solid fa-qrcode"></i>
+            </div>
+
+            <h3>Verify</h3>
+
+            <p>
+                A QR code gives consumers a simple public view of
+                the verified batch journey.
+            </p>
+
+            <span class="workflow-tag">
+                QR tracking
+            </span>
+
+        </article>
+
+    </div>
+
+</section>
+
+
+<!-- =========================================================
+     ABOUT
+========================================================= -->
+
+<section class="story-section" id="about">
+
+    <div class="section-heading">
+
+        <p class="eyebrow">Why FoodChain</p>
+
+        <h2>
+            Turning a complex supply chain into
+            <span>a clear digital story.</span>
+        </h2>
+
+    </div>
+
+
+    <div class="story-grid">
+
+        <div class="story-feature">
+
+            <div class="feature-visual">
+
+                <div class="feature-ring ring-one"></div>
+                <div class="feature-ring ring-two"></div>
+
+                <div class="feature-core">
+                    <i class="fa-solid fa-link"></i>
+                </div>
+
+                <span class="feature-pill pill-temp">
+                    27.9°C
+                </span>
+
+                <span class="feature-pill pill-gps">
+                    GPS
+                </span>
+
+                <span class="feature-pill pill-hash">
+                    SHA-256
+                </span>
+
+            </div>
+
+            <div>
+
+                <h3>
+                    Connect the physical world to a trusted digital record.
+                </h3>
+
+                <p>
+                    FoodChain combines IoT telemetry, backend processing,
+                    centralized operational storage and blockchain records
+                    to create an end-to-end traceability system.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="story-list">
+
+            <article class="story-item">
+
+                <span class="story-number">01</span>
+
+                <div>
+
+                    <h3>Visibility</h3>
+
+                    <p>
+                        Temperature, humidity, GPS and batch information
+                        can be viewed together instead of being scattered
+                        across separate systems.
+                    </p>
+
+                </div>
+
+            </article>
+
+
+            <article class="story-item">
+
+                <span class="story-number">02</span>
+
+                <div>
+
+                    <h3>Integrity</h3>
+
+                    <p>
+                        Blockchain-backed transactions provide a
+                        tamper-evident record of important supply-chain
+                        events.
+                    </p>
+
+                </div>
+
+            </article>
+
+
+            <article class="story-item">
+
+                <span class="story-number">03</span>
+
+                <div>
+
+                    <h3>Transparency</h3>
+
+                    <p>
+                        Consumers can scan a QR code and see a public
+                        traceability view without accessing protected
+                        operational information.
+                    </p>
+
+                </div>
+
+            </article>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================================================
+     ENTERPRISE ACCESS
+========================================================= -->
+
+<section class="access-section" aria-labelledby="access-title">
+
+    <div class="access-heading">
+
+        <div>
+
+            <p class="eyebrow">Enterprise workspace</p>
+
+            <h2 id="access-title">
+                One system.
+                <span>Different views for different roles.</span>
+            </h2>
+
+        </div>
+
+        <a class="text-button" href="login.html">
+            Open Enterprise Access
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+        </a>
+
+    </div>
+
+
+    <div class="role-rail">
+
+        <button
+            type="button"
+            data-enterprise-access
+            data-role="producer"
+        >
+            <span class="role-icon">
+                <i class="fa-solid fa-wheat-awn"></i>
+            </span>
+
+            <span>
+                <strong>Producer</strong>
+                <small>Register batches and origin details</small>
+            </span>
+
+            <i class="fa-solid fa-arrow-right"></i>
+        </button>
+
+
+        <button
+            type="button"
+            data-enterprise-access
+            data-role="distributor"
+        >
+            <span class="role-icon">
+                <i class="fa-solid fa-truck-fast"></i>
+            </span>
+
+            <span>
+                <strong>Distributor</strong>
+                <small>Manage custody and shipment movement</small>
+            </span>
+
+            <i class="fa-solid fa-arrow-right"></i>
+        </button>
+
+
+        <button
+            type="button"
+            data-enterprise-access
+            data-role="business"
+        >
+            <span class="role-icon">
+                <i class="fa-solid fa-chart-line"></i>
+            </span>
+
+            <span>
+                <strong>Business</strong>
+                <small>View supply-chain performance</small>
+            </span>
+
+            <i class="fa-solid fa-arrow-right"></i>
+        </button>
+
+
+        <button
+            type="button"
+            data-enterprise-access
+            data-role="admin"
+        >
+            <span class="role-icon">
+                <i class="fa-solid fa-shield-halved"></i>
+            </span>
+
+            <span>
+                <strong>Admin</strong>
+                <small>Control records, users and system operations</small>
+            </span>
+
+            <i class="fa-solid fa-arrow-right"></i>
+        </button>
+
+    </div>
+
+</section>
+
+
+<!-- =========================================================
+     DEMO / CTA
+========================================================= -->
+
+<section class="demo-section" id="demo">
+
+    <div class="demo-copy">
+
+        <p class="eyebrow">Explore FoodChain</p>
+
+        <h2>
+            Know where your food came from.
+            <span>Know what happened along the way.</span>
+        </h2>
+
+        <p>
+            Scan a batch, explore its journey and see how IoT
+            monitoring and blockchain verification work together.
+        </p>
+
+        <a class="button button-light" href="track.html">
+            Explore Public Tracking
+            <i class="fa-solid fa-arrow-right"></i>
+        </a>
+
+    </div>
+
+
+    <form class="demo-form" data-demo-form>
+
+        <div class="form-heading">
+
+            <span>REQUEST A DEMO</span>
+
+            <p>
+                See how FoodChain could fit into a real operation.
+            </p>
+
+        </div>
+
+
+        <label for="demo-name">
+            Full name
+        </label>
+
+        <input
+            id="demo-name"
+            name="name"
+            type="text"
+            placeholder="Your name"
+            autocomplete="name"
+            required
+        >
+
+
+        <label for="demo-company">
+            Company name
+        </label>
+
+        <input
+            id="demo-company"
+            name="company"
+            type="text"
+            placeholder="Your organisation"
+            autocomplete="organization"
+            required
+        >
+
+
+        <label for="demo-email">
+            Work email
+        </label>
+
+        <input
+            id="demo-email"
+            name="email"
+            type="email"
+            placeholder="you@company.com"
+            autocomplete="email"
+            required
+        >
+
+
+        <label for="demo-phone">
+            Phone number
+        </label>
+
+        <input
+            id="demo-phone"
+            name="phone"
+            type="tel"
+            placeholder="+91 98765 43210"
+            autocomplete="tel"
+            required
+        >
+
+
+        <button class="button button-accent" type="submit">
+            Request a Demo
+            <i class="fa-solid fa-arrow-right"></i>
+        </button>
+
+        <p class="form-status" data-demo-status>
+            We'll only use this to respond to your enquiry.
+        </p>
+
+    </form>
+
+</section>
+
+</main>
+
+
+<!-- =========================================================
+     FOOTER
+========================================================= -->
+
+<footer class="site-footer">
+
+    <div class="footer-brand">
+        <strong>FoodChain</strong>
+        <span>Trace what matters.</span>
+    </div>
+
+    <div class="footer-links">
+
+        <a href="track.html">Track Food</a>
+
+        <a href="#about">About</a>
+
+        <a href="#demo">Request a Demo</a>
+
+        <a href="login.html">Enterprise Access</a>
+
+    </div>
+
+    <div class="footer-copy">
+        © 2026 FoodChain
+    </div>
+
+</footer>
+
+
+<!-- =========================================================
+     ENTERPRISE ACCESS MODAL
+========================================================= -->
+
+<div
+    class="access-backdrop"
+    id="enterprise-access-modal"
+    hidden
+>
+
+    <section
+        class="access-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="access-title-modal"
+    >
+
+        <button
+            class="access-close"
+            type="button"
+            data-access-close
+            aria-label="Close Enterprise Access"
+        >
+            &times;
+        </button>
+
+
+        <p class="eyebrow">
+            FoodChain workspace
+        </p>
+
+        <h2 id="access-title-modal">
+            Choose your workspace.
+        </h2>
+
+        <p class="modal-intro">
+            Sign in to continue to the workspace for your role.
+        </p>
+
+
+        <div class="modal-grid">
+
+            <a
+                class="modal-role"
+                data-access-role="business"
+                href="login.html?role=business"
+            >
+                <i class="fa-solid fa-chart-line"></i>
+
+                <strong>
+                    Business / Management
+                </strong>
+
+                <span>
+                    See supply-chain performance and trends.
+                </span>
+            </a>
+
+
+            <a
+                class="modal-role"
+                data-access-role="admin"
+                href="login.html?role=admin"
+            >
+                <i class="fa-solid fa-shield-halved"></i>
+
+                <strong>
+                    Admin
+                </strong>
+
+                <span>
+                    Manage roles, alerts, records and operations.
+                </span>
+            </a>
+
+
+            <a
+                class="modal-role"
+                data-access-role="producer"
+                href="login.html?role=producer"
+            >
+                <i class="fa-solid fa-wheat-awn"></i>
+
+                <strong>
+                    Producer
+                </strong>
+
+                <span>
+                    Register batches and origin details.
+                </span>
+            </a>
+
+
+            <a
+                class="modal-role"
+                data-access-role="distributor"
+                href="login.html?role=distributor"
+            >
+                <i class="fa-solid fa-truck-fast"></i>
+
+                <strong>
+                    Distributor
+                </strong>
+
+                <span>
+                    Record custody and shipment checkpoints.
+                </span>
+            </a>
+
+        </div>
+
+
+        <small class="modal-note">
+            <i class="fa-solid fa-lock"></i>
+            Access is protected by the backend role guard.
+        </small>
+
+    </section>
+
+</div>
+
+
+<!-- =========================================================
+     PAGE JAVASCRIPT
+========================================================= -->
+
+<script>
+
+    const html = document.documentElement;
+    const themeIcon = document.getElementById('theme-icon');
+
+
+    function applyTheme(theme) {
+
+        html.setAttribute('data-theme', theme);
+
+        themeIcon.className =
+            theme === 'dark'
+                ? 'fa-solid fa-sun'
+                : 'fa-solid fa-moon';
+
+        localStorage.setItem('ag-theme', theme);
+    }
+
+
+    function toggleTheme() {
+
+        const current =
+            html.getAttribute('data-theme') || 'light';
+
+        applyTheme(
+            current === 'dark'
+                ? 'light'
+                : 'dark'
+        );
+    }
+
+
+    applyTheme(
+        localStorage.getItem('ag-theme') || 'light'
+    );
+
+
+    /* =======================================================
+       ENTERPRISE ACCESS
+    ======================================================= */
+
+    const accessModal =
+        document.getElementById('enterprise-access-modal');
+
+
+    function openEnterpriseAccess(role) {
+
+        accessModal.hidden = false;
+
+        document.body.classList.add('access-open');
+
+        if (role) {
+
+            accessModal
+                .querySelector(`[data-access-role="${role}"]`)
+                ?.focus();
+
+        }
+    }
+
+
+    function closeEnterpriseAccess() {
+
+        accessModal.hidden = true;
+
+        document.body.classList.remove('access-open');
+    }
+
+
+    document
+        .querySelectorAll('[data-enterprise-access]')
+        .forEach((trigger) => {
+
+            trigger.addEventListener('click', () => {
+
+                const role = trigger.dataset.role;
+
+                window.location.href =
+                    role
+                        ? `login.html?role=${encodeURIComponent(role)}`
+                        : 'login.html';
+
+            });
+
+        });
+
+
+    accessModal.addEventListener('click', (event) => {
+
+        if (event.target === accessModal) {
+            closeEnterpriseAccess();
+        }
+
+    });
+
+
+    accessModal
+        .querySelector('[data-access-close]')
+        .addEventListener('click', closeEnterpriseAccess);
+
+
+    document.addEventListener('keydown', (event) => {
+
+        if (
+            event.key === 'Escape' &&
+            !accessModal.hidden
+        ) {
+
+            closeEnterpriseAccess();
+
+        }
+
+    });
+
+
+    /* =======================================================
+       REQUEST DEMO
+    ======================================================= */
+
+    const demoForm =
+        document.querySelector('[data-demo-form]');
+
+
+    if (demoForm) {
+
+        demoForm.addEventListener('submit', (event) => {
+
+            event.preventDefault();
+
+            demoForm.reset();
+
+            demoForm
+                .querySelector('[data-demo-status]')
+                .textContent =
+                'Thanks — your demo enquiry is ready for the team.';
+
+        });
+
+    }
+
+</script>
+
 </body>
 </html>
-
-
